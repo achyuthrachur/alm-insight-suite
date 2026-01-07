@@ -659,7 +659,7 @@ export class ALMDataGenerator {
       {
         key: 'beta_dda_consumer',
         label: 'DDA Consumer Beta',
-        category: 'beta',
+        category: 'deposit_beta',
         value: 0.15,
         unit: 'ratio',
         scope: 'product',
@@ -672,7 +672,7 @@ export class ALMDataGenerator {
       {
         key: 'beta_mmda_retail',
         label: 'MMDA Retail Beta',
-        category: 'beta',
+        category: 'deposit_beta',
         value: 0.65,
         unit: 'ratio',
         scope: 'product',
