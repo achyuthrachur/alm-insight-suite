@@ -837,7 +837,7 @@ export default function AssumptionsPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {format(new Date(set.updatedAt), 'MMM d')}
+                        {safeFormatDate(set.updatedAt, 'MMM d')}
                       </span>
                     </div>
                   </motion.button>
@@ -877,13 +877,13 @@ export default function AssumptionsPage() {
                       <span className="text-sm text-alm-text-muted line-through">
                         {typeof change.priorValue === 'number'
                           ? change.priorValue.toFixed(2)
-                          : change.priorValue ?? '-'}
+                          : change.priorValue != null ? String(change.priorValue) : '-'}
                       </span>
                       <TrendingUp className="w-3 h-3 text-alm-text-muted" />
                       <span className="text-sm font-medium">
                         {typeof change.value === 'number'
                           ? change.value.toFixed(2)
-                          : change.value}
+                          : String(change.value)}
                       </span>
                     </div>
                     {change.changeReason && (
