@@ -39,6 +39,17 @@ import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
 
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string, formatStr: string): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
+
 type TabType = 'deposit_betas' | 'loan_assumptions' | 'repricing' | 'basis_risk' | 'summary';
 
 export default function AssumptionsPage() {
@@ -88,23 +99,16 @@ export default function AssumptionsPage() {
 
   // Format historical beta data for selected product
   const historicalBetaData = useMemo(() => {
-    if (!assumptionLibrary?.depositBetas || !selectedDepositProduct) {
-      // Default to first product
-      const product = assumptionLibrary?.depositBetas?.[0];
-      if (!product?.historicalBeta) return [];
-      return product.historicalBeta.slice(0, 24).reverse().map((point) => ({
-        date: format(new Date(point.date), 'MMM yy'),
-        beta: point.value,
-        marketRate: point.marketRate,
-        productRate: point.productRate,
-      }));
-    }
-    const product = assumptionLibrary.depositBetas.find(
-      (p) => p.productId === selectedDepositProduct
-    );
+    if (!assumptionLibrary?.depositBetas) return [];
+
+    const product = selectedDepositProduct
+      ? assumptionLibrary.depositBetas.find((p) => p.productId === selectedDepositProduct)
+      : assumptionLibrary.depositBetas[0];
+
     if (!product?.historicalBeta) return [];
+
     return product.historicalBeta.slice(0, 24).reverse().map((point) => ({
-      date: format(new Date(point.date), 'MMM yy'),
+      date: safeFormatDate(point.date, 'MMM yy'),
       beta: point.value,
       marketRate: point.marketRate,
       productRate: point.productRate,
@@ -887,7 +891,7 @@ export default function AssumptionsPage() {
                     )}
                   </div>
                   <div className="text-right text-xs text-alm-text-muted flex-shrink-0">
-                    <p>{format(new Date(change.asOfDate), 'MMM d, yyyy')}</p>
+                    <p>{safeFormatDate(change.asOfDate, 'MMM d, yyyy')}</p>
                     <p>{change.approvedBy || 'System'}</p>
                   </div>
                 </div>
