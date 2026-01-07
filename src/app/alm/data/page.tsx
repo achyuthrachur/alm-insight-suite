@@ -3,6 +3,18 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import {
   Database,
   Table,
@@ -216,7 +228,7 @@ export default function DataExplorerPage() {
           severity: a.severity,
           type: a.type,
           title: a.title,
-          createdAt: format(new Date(a.createdAt), 'MMM d'),
+          createdAt: safeFormatDate(a.createdAt, 'MMM d'),
         }));
       case 'hedges':
         return hedges?.map(h => ({
@@ -225,7 +237,7 @@ export default function DataExplorerPage() {
           description: h.description,
           notional: `$${(h.notional / 1_000_000).toFixed(0)}M`,
           mtm: `$${(h.marketValue / 1_000_000).toFixed(1)}M`,
-          maturity: format(new Date(h.maturityDate), 'MMM yyyy'),
+          maturity: safeFormatDate(h.maturityDate, 'MMM yyyy'),
         }));
       default:
         return [];
@@ -339,7 +351,7 @@ export default function DataExplorerPage() {
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-alm-bg-tertiary">
                     <p className="text-xs text-alm-text-muted">Last Updated</p>
                     <p className="text-lg font-semibold">
-                      {format(new Date(selectedDatasetInfo.lastUpdated), 'MMM d, h:mm a')}
+                      {safeFormatDate(selectedDatasetInfo.lastUpdated, 'MMM d, h:mm a')}
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-alm-bg-tertiary">

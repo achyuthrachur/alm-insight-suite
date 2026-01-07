@@ -3,6 +3,18 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import {
   TrendingUp,
   TrendingDown,
@@ -171,7 +183,7 @@ export default function ALMOverviewPage() {
           </h1>
           <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
             Asset-Liability Management Overview •{' '}
-            {currentRun ? format(new Date(currentRun.timestamp), 'MMMM d, yyyy') : 'Loading...'}
+            {currentRun ? safeFormatDate(currentRun.timestamp, 'MMMM d, yyyy') : 'Loading...'}
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -2,6 +2,18 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import {
   Calendar,
   ChevronDown,
@@ -67,7 +79,7 @@ export function Header() {
                 Current Run
               </p>
               <p className="text-sm font-medium text-alm-text-dark dark:text-alm-text-primary">
-                {currentRun ? format(new Date(currentRun.timestamp), 'MMM d, yyyy') : 'Loading...'}
+                {currentRun ? safeFormatDate(currentRun.timestamp, 'MMM d, yyyy') : 'Loading...'}
               </p>
             </div>
             <ChevronDown className="w-4 h-4 text-alm-text-muted" />
@@ -93,7 +105,7 @@ export function Header() {
                     <div>
                       <p className="text-sm font-medium">{currentRun.label}</p>
                       <p className="text-xs text-alm-text-muted">
-                        {format(new Date(currentRun.timestamp), 'MMM d, yyyy h:mm a')}
+                        {safeFormatDate(currentRun.timestamp, 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
                     <span className="badge-success">Current</span>
@@ -107,7 +119,7 @@ export function Header() {
                     <div>
                       <p className="text-sm font-medium">{priorRun.label}</p>
                       <p className="text-xs text-alm-text-muted">
-                        {format(new Date(priorRun.timestamp), 'MMM d, yyyy h:mm a')}
+                        {safeFormatDate(priorRun.timestamp, 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
                     <span className="badge-neutral">Prior</span>

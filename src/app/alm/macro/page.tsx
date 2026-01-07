@@ -12,6 +12,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import { Globe, TrendingUp, TrendingDown, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
@@ -129,7 +141,7 @@ export default function MacroPage() {
         .slice(0, 24)
         .reverse()
         .map((point) => ({
-          date: format(new Date(point.date), 'MMM yy'),
+          date: safeFormatDate(point.date, 'MMM yy'),
           fedFunds: point.value,
         }));
     }
@@ -140,7 +152,7 @@ export default function MacroPage() {
     if (!fedFunds) return [];
 
     return fedFunds.points.slice(-24).map((point) => ({
-      date: format(new Date(point.date), 'MMM yy'),
+      date: safeFormatDate(point.date, 'MMM yy'),
       fedFunds: point.value,
     }));
   }, [macroSeries, fredData]);

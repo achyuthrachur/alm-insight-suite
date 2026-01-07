@@ -2,6 +2,18 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import {
   AlertTriangle,
   AlertCircle,
@@ -126,7 +138,7 @@ export function AlertsFeed({
                       {config.label}
                     </span>
                     <span className="text-xs text-alm-text-muted">
-                      {format(new Date(alert.createdAt), 'MMM d, h:mm a')}
+                      {safeFormatDate(alert.createdAt, 'MMM d, h:mm a')}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-alm-text-dark dark:text-alm-text-primary truncate">

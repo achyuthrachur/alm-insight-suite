@@ -13,6 +13,18 @@ import {
   Legend,
 } from 'recharts';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import { FlaskConical, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
@@ -33,7 +45,7 @@ export default function BacktestingPage() {
   const niiChartData = useMemo(() => {
     if (!niiBacktest) return [];
     return niiBacktest.forecasts.map((f, idx) => ({
-      date: format(new Date(f.date), 'MMM yy'),
+      date: safeFormatDate(f.date, 'MMM yy'),
       forecast: f.value / 1_000_000,
       realized: niiBacktest.realized[idx]?.value / 1_000_000 || null,
     }));
@@ -43,7 +55,7 @@ export default function BacktestingPage() {
   const betaChartData = useMemo(() => {
     if (!betaBacktest) return [];
     return betaBacktest.forecasts.map((f, idx) => ({
-      date: format(new Date(f.date), 'MMM yy'),
+      date: safeFormatDate(f.date, 'MMM yy'),
       forecast: f.value,
       realized: betaBacktest.realized[idx]?.value || null,
     }));
@@ -325,7 +337,7 @@ export default function BacktestingPage() {
                   <div className="text-right">
                     <p className="text-sm font-medium">Magnitude: {signal.magnitude.toFixed(2)}</p>
                     <p className="text-xs text-alm-text-muted">
-                      {format(new Date(signal.detectedAt), 'MMM d, yyyy')}
+                      {safeFormatDate(signal.detectedAt, 'MMM d, yyyy')}
                     </p>
                   </div>
                 </div>

@@ -17,6 +17,18 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import { TrendingUp, TrendingDown, Activity, Sliders, Info } from 'lucide-react';
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
@@ -220,7 +232,7 @@ export default function DepositsPage() {
                     return (
                       <div className="bg-white dark:bg-alm-bg-secondary border border-slate-200 dark:border-alm-border rounded-lg shadow-lg p-3">
                         <p className="text-xs text-alm-text-muted mb-1">
-                          {format(new Date(data.date), 'MMM yyyy')}
+                          {safeFormatDate(data.date, 'MMM yyyy')}
                         </p>
                         <p className="text-sm">Market: {data.marketRate.toFixed(2)}%</p>
                         <p className="text-sm">Deposit: {data.depositRate.toFixed(2)}%</p>

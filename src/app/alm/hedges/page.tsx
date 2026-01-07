@@ -3,6 +3,18 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+
+// Safe date formatting helper to handle Date objects and ISO strings
+const safeFormatDate = (date: Date | string | undefined | null, formatStr: string): string => {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return format(dateObj, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 import {
   Shield,
   TrendingUp,
@@ -305,7 +317,7 @@ export default function HedgesPage() {
                     ${(hedge.dv01 / 1000).toFixed(0)}K
                   </td>
                   <td className="tabular-nums">
-                    {format(new Date(hedge.maturityDate), 'MMM yyyy')}
+                    {safeFormatDate(hedge.maturityDate, 'MMM yyyy')}
                   </td>
                   <td>
                     {hedge.effectiveness ? (
