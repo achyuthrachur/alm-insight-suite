@@ -628,7 +628,7 @@ export default function AssumptionsPage() {
           >
             <div className="space-y-4 p-2">
               {assumptionLibrary?.loanAssumptions
-                ?.filter((l) => l.repricingAssumptions.repricingFrequency !== 'fixed')
+                ?.filter((l) => l.repricingAssumptions.repricingFrequency !== 'at_maturity')
                 .map((loan) => (
                   <div
                     key={loan.productId}
