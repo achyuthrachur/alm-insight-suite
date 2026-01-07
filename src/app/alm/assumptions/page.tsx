@@ -857,7 +857,7 @@ export default function AssumptionsPage() {
                   <div
                     className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-                      Math.abs(change.newValue - change.oldValue) / change.oldValue > 0.1
+                      change.priorValue !== undefined && Math.abs(change.value - change.priorValue) / change.priorValue > 0.1
                         ? 'bg-alm-warning/10 text-alm-warning'
                         : 'bg-alm-success/10 text-alm-success'
                     )}
@@ -866,29 +866,29 @@ export default function AssumptionsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{change.parameterName}</span>
+                      <span className="font-medium text-sm">{change.parameterLabel}</span>
                       <span className="text-xs text-alm-text-muted">({change.category})</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-sm text-alm-text-muted line-through">
-                        {typeof change.oldValue === 'number'
-                          ? change.oldValue.toFixed(2)
-                          : change.oldValue}
+                        {typeof change.priorValue === 'number'
+                          ? change.priorValue.toFixed(2)
+                          : change.priorValue ?? '-'}
                       </span>
                       <TrendingUp className="w-3 h-3 text-alm-text-muted" />
                       <span className="text-sm font-medium">
-                        {typeof change.newValue === 'number'
-                          ? change.newValue.toFixed(2)
-                          : change.newValue}
+                        {typeof change.value === 'number'
+                          ? change.value.toFixed(2)
+                          : change.value}
                       </span>
                     </div>
-                    {change.reason && (
-                      <p className="text-xs text-alm-text-muted mt-1">{change.reason}</p>
+                    {change.changeReason && (
+                      <p className="text-xs text-alm-text-muted mt-1">{change.changeReason}</p>
                     )}
                   </div>
                   <div className="text-right text-xs text-alm-text-muted flex-shrink-0">
-                    <p>{format(new Date(change.changedAt), 'MMM d, yyyy')}</p>
-                    <p>{change.changedBy}</p>
+                    <p>{format(new Date(change.asOfDate), 'MMM d, yyyy')}</p>
+                    <p>{change.approvedBy || 'System'}</p>
                   </div>
                 </div>
               ))}
