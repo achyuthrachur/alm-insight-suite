@@ -641,7 +641,7 @@ export default function AssumptionsPage() {
                     <div className="grid grid-cols-4 gap-4 text-sm">
                       <div>
                         <p className="text-alm-text-muted">Index</p>
-                        <p className="font-medium">{loan.repricingAssumptions.indexType}</p>
+                        <p className="font-medium">{loan.pricingBeta.indexType}</p>
                       </div>
                       <div>
                         <p className="text-alm-text-muted">Lag</p>
@@ -656,8 +656,8 @@ export default function AssumptionsPage() {
                       <div>
                         <p className="text-alm-text-muted">Floor</p>
                         <p className="font-medium">
-                          {loan.repricingAssumptions.floor
-                            ? `${(loan.repricingAssumptions.floor * 100).toFixed(2)}%`
+                          {loan.pricingBeta.floor
+                            ? `${(loan.pricingBeta.floor * 100).toFixed(2)}%`
                             : 'None'}
                         </p>
                       </div>
