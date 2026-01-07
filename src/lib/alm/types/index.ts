@@ -339,15 +339,209 @@ export interface AssumptionParam {
 
 export type AssumptionCategory =
   | 'prepayment'
-  | 'beta'
+  | 'deposit_beta'
+  | 'loan_beta'
+  | 'repricing'
   | 'decay'
   | 'growth'
   | 'pricing'
   | 'credit'
   | 'liquidity'
-  | 'operational';
+  | 'operational'
+  | 'basis_risk'
+  | 'optionality';
 
 export type AssumptionScope = 'portfolio' | 'product' | 'segment';
+
+// ----------------------------------------------------------------------------
+// Comprehensive Beta & Assumption Types
+// ----------------------------------------------------------------------------
+
+export interface LoanAssumptions {
+  productId: string;
+  productType: ProductType;
+  productName: string;
+  segment?: string;
+  balance: number;
+  prepayment: PrepaymentAssumptions;
+  pricingBeta: LoanPricingBeta;
+  creditAssumptions: CreditAssumptions;
+  repricingAssumptions: RepricingAssumptions;
+  historicalValues: AssumptionHistoryPoint[];
+}
+
+export interface PrepaymentAssumptions {
+  baselineCPR: number; // Conditional Prepayment Rate %
+  incentiveCPR: number; // Rate-driven prepay %
+  seasonalityAdjustment: number[];  // 12 monthly adjustments
+  burnoutFactor: number; // Prepay exhaustion factor
+  refiThreshold: number; // Rate threshold for refi (bps)
+  modelType: 'PSA' | 'CPR' | 'SMM' | 'custom';
+  psaMultiple?: number; // If PSA model
+  smmRate?: number; // Single Monthly Mortality
+  historicalCPR: { date: Date; value: number }[];
+}
+
+export interface LoanPricingBeta {
+  indexType: 'SOFR' | 'Prime' | 'Treasury' | 'Fed_Funds' | 'custom';
+  levelBeta: number; // Rate sensitivity (0 = fixed, 1 = full float)
+  spreadBeta: number; // Spread sensitivity to market
+  lagMonths: number; // Repricing lag in months
+  floor?: number; // Rate floor
+  cap?: number; // Rate cap
+  rSquared: number;
+  stability: 'stable' | 'moderate' | 'volatile';
+  historicalBeta: { date: Date; value: number }[];
+}
+
+export interface CreditAssumptions {
+  expectedLossRate: number; // Annual expected loss %
+  pdRate: number; // Probability of Default %
+  lgdRate: number; // Loss Given Default %
+  migrationMatrix?: number[][]; // Rating migration probabilities
+  stressMultiplier: number; // Multiplier for stress scenarios
+  historicalLoss: { date: Date; value: number }[];
+}
+
+export interface RepricingAssumptions {
+  repricingFrequency: 'daily' | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'at_maturity';
+  indexLag: number; // Days lag from index reset
+  basisSpread: number; // Spread to index (bps)
+  resetDate?: number; // Day of month for reset
+  lookbackPeriod?: number; // Days for averaging
+  compoundingMethod?: 'simple' | 'compound' | 'daily_compound';
+}
+
+export interface AssumptionHistoryPoint {
+  asOfDate: Date;
+  category: AssumptionCategory;
+  parameterKey: string;
+  parameterLabel: string;
+  value: number;
+  priorValue?: number;
+  changeReason?: string;
+  approvedBy?: string;
+}
+
+// Enhanced Deposit Beta with more detail
+export interface EnhancedDepositBeta {
+  productId: string;
+  productName: string;
+  productType: ProductType;
+  segment: string;
+  balance: number;
+
+  // Current Beta Values
+  levelBeta: number; // Overall rate sensitivity
+  cumulativeBeta: number; // Pass-through since cycle start
+  incrementalBeta: number; // Most recent period beta
+
+  // Beta Components
+  upBeta: number; // Beta in rising rate environment
+  downBeta: number; // Beta in falling rate environment
+  asymmetryRatio: number; // Up/Down beta ratio
+
+  // Lag Analysis
+  lagMonths: number; // Average lag to market
+  lagDistribution: number[]; // % responding at each month
+
+  // Statistical Quality
+  rSquared: number;
+  standardError: number;
+  confidenceInterval: { lower: number; upper: number };
+  sampleSize: number;
+  stability: 'stable' | 'moderate' | 'volatile';
+
+  // Historical Series
+  historicalBeta: { date: Date; value: number; marketRate: number; productRate: number }[];
+
+  // Peer Comparison
+  peerBetaAvg?: number;
+  peerBetaRange?: { min: number; max: number };
+
+  // Model Info
+  modelType: 'regression' | 'kalman' | 'time_varying' | 'machine_learning';
+  lastCalibrated: Date;
+  nextReviewDate: Date;
+}
+
+// Comprehensive Repricing Gap Analysis
+export interface EnhancedRepricingGap {
+  bucket: string;
+  bucketStart: number;
+  bucketEnd: number;
+
+  // Asset Breakdown
+  assets: {
+    total: number;
+    fixed: number;
+    floating: number;
+    byProduct: { productType: ProductType; amount: number }[];
+  };
+
+  // Liability Breakdown
+  liabilities: {
+    total: number;
+    fixed: number;
+    floating: number;
+    byProduct: { productType: ProductType; amount: number }[];
+  };
+
+  // Derivatives
+  derivativeNotional: number;
+  derivativeDirection: 'pay_fixed' | 'receive_fixed' | 'neutral';
+
+  // Gap Metrics
+  grossGap: number;
+  netGap: number;
+  cumulativeGap: number;
+  gapRatio: number;
+  betaAdjustedGap: number; // Gap adjusted for deposit betas
+
+  // Sensitivity
+  niiImpact100bp: number;
+  eveImpact100bp: number;
+}
+
+// Index Basis Risk
+export interface BasisRiskAssumptions {
+  indexPair: { index1: string; index2: string };
+  historicalSpread: { date: Date; spread: number }[];
+  currentSpread: number;
+  volatility: number;
+  correlation: number;
+  stressSpread: number;
+  exposureAmount: number;
+}
+
+// Optionality Assumptions
+export interface OptionAssumptions {
+  productId: string;
+  productType: ProductType;
+  optionType: 'prepay' | 'call' | 'put' | 'cap' | 'floor' | 'collar';
+  strikeRate?: number;
+  currentIntrinsicValue: number;
+  impliedVolatility: number;
+  timeValue: number;
+  behavioralMultiplier: number; // Actual vs optimal exercise
+  historicalExercise: { date: Date; exerciseRate: number }[];
+}
+
+// Assumption Library - aggregates all assumptions with history
+export interface AssumptionLibrary {
+  asOfDate: Date;
+  depositBetas: EnhancedDepositBeta[];
+  loanAssumptions: LoanAssumptions[];
+  basisRisks: BasisRiskAssumptions[];
+  optionAssumptions: OptionAssumptions[];
+  assumptionHistory: AssumptionHistoryPoint[];
+  summaryMetrics: {
+    avgDepositBeta: number;
+    avgLoanPrepayment: number;
+    avgLoanBeta: number;
+    totalBetaAdjustedGap: number;
+  };
+}
 
 export interface Approval {
   approver: string;

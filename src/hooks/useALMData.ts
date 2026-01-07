@@ -18,6 +18,7 @@ import type {
   BacktestResult,
   HorizonType,
   GlobalFilters,
+  AssumptionLibrary,
 } from '@/lib/alm/types';
 
 interface ALMDataState {
@@ -36,6 +37,7 @@ interface ALMDataState {
   liquidity: LiquidityMetrics | null;
   hedges: Hedge[];
   backtests: BacktestResult[];
+  assumptionLibrary: AssumptionLibrary | null;
 }
 
 interface UseALMDataReturn extends ALMDataState {
@@ -78,6 +80,7 @@ export function useALMData(): UseALMDataReturn {
     liquidity: null,
     hedges: [],
     backtests: [],
+    assumptionLibrary: null,
   });
 
   const [filters, setFiltersState] = useState<GlobalFilters>(DEFAULT_FILTERS);
@@ -104,6 +107,7 @@ export function useALMData(): UseALMDataReturn {
         liquidity: data.liquidity,
         hedges: data.hedges,
         backtests: data.backtests,
+        assumptionLibrary: data.assumptionLibrary,
       });
 
       // Update filters with actual run IDs
@@ -230,6 +234,11 @@ export function useBacktests() {
 }
 
 export function useAssumptions() {
-  const { assumptionSets, isLoading } = useALMData();
-  return { assumptionSets, isLoading };
+  const { assumptionSets, assumptionLibrary, isLoading } = useALMData();
+  return { assumptionSets, assumptionLibrary, isLoading };
+}
+
+export function useAssumptionLibrary() {
+  const { assumptionLibrary, isLoading } = useALMData();
+  return { assumptionLibrary, isLoading };
 }

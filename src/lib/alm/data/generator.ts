@@ -29,6 +29,16 @@ import type {
   BacktestResult,
   HorizonType,
   DataWarning,
+  EnhancedDepositBeta,
+  LoanAssumptions,
+  PrepaymentAssumptions,
+  LoanPricingBeta,
+  CreditAssumptions,
+  RepricingAssumptions,
+  AssumptionHistoryPoint,
+  BasisRiskAssumptions,
+  AssumptionLibrary,
+  AssumptionCategory,
 } from '../types';
 
 // ============================================================================
@@ -978,6 +988,315 @@ export class ALMDataGenerator {
   }
 
   // ----------------------------------------------------------------------------
+  // Enhanced Deposit Betas Generation
+  // ----------------------------------------------------------------------------
+
+  generateEnhancedDepositBetas(): EnhancedDepositBeta[] {
+    const depositTypes: { type: ProductType; name: string; segment: string; avgBeta: number; balance: number }[] = [
+      { type: 'deposits_dda', name: 'DDA - Consumer', segment: 'Retail', avgBeta: 0.12, balance: 1_800_000_000 },
+      { type: 'deposits_dda', name: 'DDA - Commercial', segment: 'Commercial', avgBeta: 0.22, balance: 2_200_000_000 },
+      { type: 'deposits_now', name: 'NOW Accounts', segment: 'Retail', avgBeta: 0.18, balance: 950_000_000 },
+      { type: 'deposits_mmda', name: 'MMDA - Retail', segment: 'Retail', avgBeta: 0.62, balance: 2_400_000_000 },
+      { type: 'deposits_mmda', name: 'MMDA - Commercial', segment: 'Commercial', avgBeta: 0.72, balance: 1_600_000_000 },
+      { type: 'deposits_savings', name: 'Savings Accounts', segment: 'Retail', avgBeta: 0.32, balance: 1_100_000_000 },
+      { type: 'deposits_cd', name: 'CD < 1 Year', segment: 'Retail', avgBeta: 0.88, balance: 1_200_000_000 },
+      { type: 'deposits_cd', name: 'CD 1-2 Year', segment: 'Retail', avgBeta: 0.82, balance: 800_000_000 },
+    ];
+
+    return depositTypes.map(dt => {
+      const levelBeta = dt.avgBeta + this.randomFloat(-0.08, 0.08);
+      const upBeta = levelBeta * this.randomFloat(1.05, 1.20);
+      const downBeta = levelBeta * this.randomFloat(0.70, 0.90);
+
+      // Generate historical beta with realistic pattern
+      const historicalBeta: { date: Date; value: number; marketRate: number; productRate: number }[] = [];
+      let marketRate = 0.25;
+      let productRate = dt.type === 'deposits_cd' ? 0.5 : 0.1;
+
+      for (let i = 36; i >= 0; i--) {
+        const date = subMonths(this.asOfDate, i);
+        // Simulate rate rising cycle
+        if (i > 24) {
+          marketRate += this.randomFloat(0, 0.05);
+        } else if (i > 12) {
+          marketRate += this.randomFloat(0.1, 0.25);
+        } else {
+          marketRate += this.randomFloat(-0.05, 0.10);
+        }
+        marketRate = Math.max(0.25, Math.min(5.5, marketRate));
+
+        // Product rate follows with beta
+        const targetRate = productRate + (marketRate - (i === 36 ? 0.25 : historicalBeta[historicalBeta.length - 1]?.marketRate || 0.25)) * levelBeta;
+        productRate = productRate * 0.7 + targetRate * 0.3 + this.randomNormal(0, 0.02);
+        productRate = Math.max(0, productRate);
+
+        const periodBeta = i === 36 ? levelBeta : (productRate - historicalBeta[historicalBeta.length - 1]?.productRate || 0) /
+          Math.max(0.01, marketRate - (historicalBeta[historicalBeta.length - 1]?.marketRate || 0.25));
+
+        historicalBeta.push({
+          date,
+          value: Math.max(0, Math.min(1.5, levelBeta + this.randomNormal(0, 0.05))),
+          marketRate,
+          productRate,
+        });
+      }
+
+      return {
+        productId: this.generateId('dbeta'),
+        productName: dt.name,
+        productType: dt.type,
+        segment: dt.segment,
+        balance: dt.balance,
+
+        levelBeta: Math.max(0, Math.min(1.2, levelBeta)),
+        cumulativeBeta: levelBeta * this.randomFloat(0.85, 1.0),
+        incrementalBeta: levelBeta * this.randomFloat(0.9, 1.15),
+
+        upBeta: Math.max(0, Math.min(1.5, upBeta)),
+        downBeta: Math.max(0, Math.min(1.2, downBeta)),
+        asymmetryRatio: upBeta / Math.max(0.01, downBeta),
+
+        lagMonths: dt.type.includes('cd') ? 0 : this.randomInt(1, 3),
+        lagDistribution: [0.4, 0.35, 0.15, 0.07, 0.03],
+
+        rSquared: this.randomFloat(0.72, 0.96),
+        standardError: this.randomFloat(0.02, 0.08),
+        confidenceInterval: {
+          lower: Math.max(0, levelBeta - 0.12),
+          upper: Math.min(1.5, levelBeta + 0.12),
+        },
+        sampleSize: this.randomInt(36, 60),
+        stability: levelBeta > 0.5 ? 'moderate' : 'stable',
+
+        historicalBeta,
+
+        peerBetaAvg: levelBeta * this.randomFloat(0.9, 1.1),
+        peerBetaRange: {
+          min: levelBeta * 0.7,
+          max: levelBeta * 1.3,
+        },
+
+        modelType: 'regression',
+        lastCalibrated: subMonths(this.asOfDate, this.randomInt(1, 3)),
+        nextReviewDate: addMonths(this.asOfDate, this.randomInt(1, 6)),
+      };
+    });
+  }
+
+  // ----------------------------------------------------------------------------
+  // Loan Assumptions Generation
+  // ----------------------------------------------------------------------------
+
+  generateLoanAssumptions(): LoanAssumptions[] {
+    const loanTypes: { type: ProductType; name: string; segment: string; cpr: number; beta: number; loss: number; balance: number }[] = [
+      { type: 'loans_mortgage', name: 'Residential Mortgages - 30Y Fixed', segment: 'Retail', cpr: 8.5, beta: 0.0, loss: 0.15, balance: 2_400_000_000 },
+      { type: 'loans_mortgage', name: 'Residential Mortgages - 15Y Fixed', segment: 'Retail', cpr: 12.0, beta: 0.0, loss: 0.10, balance: 800_000_000 },
+      { type: 'loans_mortgage', name: 'Residential Mortgages - ARM', segment: 'Retail', cpr: 15.0, beta: 0.85, loss: 0.20, balance: 450_000_000 },
+      { type: 'loans_commercial', name: 'C&I Loans - Fixed Rate', segment: 'Commercial', cpr: 5.0, beta: 0.0, loss: 0.45, balance: 1_800_000_000 },
+      { type: 'loans_commercial', name: 'C&I Loans - Floating Rate', segment: 'Commercial', cpr: 8.0, beta: 0.95, loss: 0.50, balance: 1_400_000_000 },
+      { type: 'loans_cre', name: 'CRE - Multifamily', segment: 'Commercial', cpr: 6.0, beta: 0.0, loss: 0.35, balance: 1_200_000_000 },
+      { type: 'loans_cre', name: 'CRE - Office', segment: 'Commercial', cpr: 4.0, beta: 0.0, loss: 0.85, balance: 600_000_000 },
+      { type: 'loans_cre', name: 'CRE - Retail', segment: 'Commercial', cpr: 5.0, beta: 0.0, loss: 0.65, balance: 300_000_000 },
+      { type: 'loans_consumer', name: 'Auto Loans', segment: 'Retail', cpr: 18.0, beta: 0.0, loss: 1.20, balance: 400_000_000 },
+      { type: 'loans_consumer', name: 'Personal Loans', segment: 'Retail', cpr: 25.0, beta: 0.0, loss: 2.50, balance: 250_000_000 },
+    ];
+
+    return loanTypes.map(lt => {
+      const baselineCPR = lt.cpr + this.randomFloat(-1.5, 1.5);
+
+      // Generate historical CPR
+      const historicalCPR: { date: Date; value: number }[] = [];
+      for (let i = 24; i >= 0; i--) {
+        historicalCPR.push({
+          date: subMonths(this.asOfDate, i),
+          value: baselineCPR + this.randomNormal(0, lt.cpr * 0.15),
+        });
+      }
+
+      // Generate historical beta for floating rate loans
+      const historicalBeta: { date: Date; value: number }[] = [];
+      for (let i = 24; i >= 0; i--) {
+        historicalBeta.push({
+          date: subMonths(this.asOfDate, i),
+          value: lt.beta + this.randomNormal(0, 0.03),
+        });
+      }
+
+      // Generate historical loss
+      const historicalLoss: { date: Date; value: number }[] = [];
+      for (let i = 24; i >= 0; i--) {
+        historicalLoss.push({
+          date: subMonths(this.asOfDate, i),
+          value: Math.max(0, lt.loss + this.randomNormal(0, lt.loss * 0.2)),
+        });
+      }
+
+      const prepayment: PrepaymentAssumptions = {
+        baselineCPR,
+        incentiveCPR: lt.type === 'loans_mortgage' ? baselineCPR * 2.5 : baselineCPR * 1.2,
+        seasonalityAdjustment: [0.85, 0.88, 0.95, 1.05, 1.12, 1.15, 1.18, 1.12, 1.05, 0.98, 0.92, 0.88],
+        burnoutFactor: lt.type === 'loans_mortgage' ? 0.65 : 0.80,
+        refiThreshold: lt.type === 'loans_mortgage' ? 50 : 100,
+        modelType: lt.type === 'loans_mortgage' ? 'PSA' : 'CPR',
+        psaMultiple: lt.type === 'loans_mortgage' ? 150 : undefined,
+        historicalCPR,
+      };
+
+      const pricingBeta: LoanPricingBeta = {
+        indexType: lt.beta > 0 ? 'SOFR' : 'Treasury',
+        levelBeta: lt.beta,
+        spreadBeta: lt.beta > 0 ? this.randomFloat(0.02, 0.08) : 0,
+        lagMonths: lt.beta > 0 ? this.randomInt(0, 1) : 0,
+        floor: lt.beta > 0 ? this.randomFloat(0.03, 0.045) : undefined,
+        cap: lt.beta > 0 ? this.randomFloat(0.08, 0.12) : undefined,
+        rSquared: lt.beta > 0 ? this.randomFloat(0.92, 0.99) : 1.0,
+        stability: 'stable',
+        historicalBeta,
+      };
+
+      const creditAssumptions: CreditAssumptions = {
+        expectedLossRate: lt.loss,
+        pdRate: lt.loss * this.randomFloat(1.5, 2.5),
+        lgdRate: lt.loss / (lt.loss * this.randomFloat(1.5, 2.5)) * 100,
+        stressMultiplier: this.randomFloat(2.0, 3.5),
+        historicalLoss,
+      };
+
+      const repricingAssumptions: RepricingAssumptions = {
+        repricingFrequency: lt.beta > 0 ? 'monthly' : 'at_maturity',
+        indexLag: lt.beta > 0 ? this.randomInt(0, 5) : 0,
+        basisSpread: lt.beta > 0 ? this.randomInt(150, 350) : 0,
+        compoundingMethod: 'simple',
+      };
+
+      // Generate historical values
+      const historicalValues: AssumptionHistoryPoint[] = [];
+      const categories: AssumptionCategory[] = ['prepayment', 'loan_beta', 'credit'];
+      for (let i = 12; i >= 0; i--) {
+        for (const category of categories) {
+          historicalValues.push({
+            asOfDate: subMonths(this.asOfDate, i),
+            category,
+            parameterKey: `${lt.name.toLowerCase().replace(/\s+/g, '_')}_${category}`,
+            parameterLabel: `${lt.name} ${category}`,
+            value: category === 'prepayment' ? baselineCPR + this.randomNormal(0, 0.5) :
+                   category === 'loan_beta' ? lt.beta + this.randomNormal(0, 0.02) :
+                   lt.loss + this.randomNormal(0, lt.loss * 0.1),
+            priorValue: i === 12 ? undefined : historicalValues[historicalValues.length - 3]?.value,
+          });
+        }
+      }
+
+      return {
+        productId: this.generateId('loan'),
+        productType: lt.type,
+        productName: lt.name,
+        segment: lt.segment,
+        balance: lt.balance,
+        prepayment,
+        pricingBeta,
+        creditAssumptions,
+        repricingAssumptions,
+        historicalValues,
+      };
+    });
+  }
+
+  // ----------------------------------------------------------------------------
+  // Basis Risk Assumptions Generation
+  // ----------------------------------------------------------------------------
+
+  generateBasisRiskAssumptions(): BasisRiskAssumptions[] {
+    const basisPairs = [
+      { index1: 'SOFR', index2: 'Prime', avgSpread: 325, exposure: 2_800_000_000 },
+      { index1: 'SOFR', index2: 'Fed Funds', avgSpread: 8, exposure: 1_500_000_000 },
+      { index1: '1M SOFR', index2: '3M SOFR', avgSpread: 12, exposure: 800_000_000 },
+      { index1: 'SOFR', index2: '1Y Treasury', avgSpread: -15, exposure: 1_200_000_000 },
+    ];
+
+    return basisPairs.map(bp => {
+      const historicalSpread: { date: Date; spread: number }[] = [];
+      let spread = bp.avgSpread;
+
+      for (let i = 36; i >= 0; i--) {
+        spread = bp.avgSpread + this.randomNormal(0, Math.abs(bp.avgSpread) * 0.1);
+        historicalSpread.push({
+          date: subMonths(this.asOfDate, i),
+          spread,
+        });
+      }
+
+      return {
+        indexPair: { index1: bp.index1, index2: bp.index2 },
+        historicalSpread,
+        currentSpread: spread,
+        volatility: Math.abs(bp.avgSpread) * this.randomFloat(0.08, 0.15),
+        correlation: this.randomFloat(0.85, 0.98),
+        stressSpread: bp.avgSpread * this.randomFloat(1.5, 2.5),
+        exposureAmount: bp.exposure,
+      };
+    });
+  }
+
+  // ----------------------------------------------------------------------------
+  // Full Assumption Library Generation
+  // ----------------------------------------------------------------------------
+
+  generateAssumptionLibrary(): AssumptionLibrary {
+    const depositBetas = this.generateEnhancedDepositBetas();
+    const loanAssumptions = this.generateLoanAssumptions();
+    const basisRisks = this.generateBasisRiskAssumptions();
+
+    // Aggregate historical values
+    const assumptionHistory: AssumptionHistoryPoint[] = [];
+
+    // Add deposit beta history
+    for (const db of depositBetas) {
+      for (let i = 0; i < Math.min(12, db.historicalBeta.length); i++) {
+        const hb = db.historicalBeta[i];
+        assumptionHistory.push({
+          asOfDate: hb.date,
+          category: 'deposit_beta',
+          parameterKey: `${db.productName.toLowerCase().replace(/\s+/g, '_')}_beta`,
+          parameterLabel: `${db.productName} Beta`,
+          value: hb.value,
+          priorValue: i > 0 ? db.historicalBeta[i - 1]?.value : undefined,
+        });
+      }
+    }
+
+    // Add loan assumption history
+    for (const la of loanAssumptions) {
+      assumptionHistory.push(...la.historicalValues);
+    }
+
+    // Calculate summary metrics
+    const avgDepositBeta = depositBetas.reduce((sum, db) => sum + db.levelBeta * db.balance, 0) /
+      depositBetas.reduce((sum, db) => sum + db.balance, 0);
+    const avgLoanPrepayment = loanAssumptions.reduce((sum, la) => sum + la.prepayment.baselineCPR * la.balance, 0) /
+      loanAssumptions.reduce((sum, la) => sum + la.balance, 0);
+    const avgLoanBeta = loanAssumptions
+      .filter(la => la.pricingBeta.levelBeta > 0)
+      .reduce((sum, la) => sum + la.pricingBeta.levelBeta * la.balance, 0) /
+      Math.max(1, loanAssumptions.filter(la => la.pricingBeta.levelBeta > 0).reduce((sum, la) => sum + la.balance, 0));
+
+    return {
+      asOfDate: this.asOfDate,
+      depositBetas,
+      loanAssumptions,
+      basisRisks,
+      optionAssumptions: [], // Can be expanded later
+      assumptionHistory,
+      summaryMetrics: {
+        avgDepositBeta,
+        avgLoanPrepayment,
+        avgLoanBeta,
+        totalBetaAdjustedGap: this.randomFloat(-500_000_000, 500_000_000),
+      },
+    };
+  }
+
+  // ----------------------------------------------------------------------------
   // Full Data Generation
   // ----------------------------------------------------------------------------
 
@@ -1002,6 +1321,7 @@ export class ALMDataGenerator {
     const liquidity = this.generateLiquidityMetrics(currentRun.runId);
     const hedges = this.generateHedges();
     const backtests = this.generateBacktestResults();
+    const assumptionLibrary = this.generateAssumptionLibrary();
 
     return {
       currentRun,
@@ -1017,6 +1337,7 @@ export class ALMDataGenerator {
       liquidity,
       hedges,
       backtests,
+      assumptionLibrary,
     };
   }
 }
