@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // API route for AI-powered ALCO report generation
-// Uses Anthropic Claude API for narrative generation
+// Uses OpenAI GPT API for narrative generation
 
 interface ReportRequest {
   runId: string;
@@ -29,15 +29,22 @@ interface ReportRequest {
     title: string;
     description: string;
   }[];
+  macroData?: {
+    fedFundsRate?: number;
+    treasury10Y?: number;
+    treasury2Y?: number;
+    unemploymentRate?: number;
+    cpi?: number;
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ReportRequest = await request.json();
 
-    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-    if (!ANTHROPIC_API_KEY) {
+    if (!OPENAI_API_KEY) {
       // Return mock response if no API key
       return NextResponse.json({
         success: true,
@@ -46,7 +53,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Call Anthropic API
+    // Build macro context if available
+    const macroContext = body.macroData ? `
+CURRENT MACROECONOMIC ENVIRONMENT (from FRED):
+- Fed Funds Rate: ${body.macroData.fedFundsRate?.toFixed(2) || 'N/A'}%
+- 10-Year Treasury: ${body.macroData.treasury10Y?.toFixed(2) || 'N/A'}%
+- 2-Year Treasury: ${body.macroData.treasury2Y?.toFixed(2) || 'N/A'}%
+- Unemployment Rate: ${body.macroData.unemploymentRate?.toFixed(1) || 'N/A'}%
+- CPI (YoY): ${body.macroData.cpi?.toFixed(1) || 'N/A'}%
+` : '';
+
+    // Call OpenAI API
     const systemPrompt = `You are an expert ALM (Asset-Liability Management) analyst generating executive reports for ALCO (Asset-Liability Committee) meetings.
 
 Generate reports in PLAIN TEXT ONLY - no markdown, no bullet points with asterisks, no headers with hash marks. Use clear paragraph breaks and numbered lists where appropriate.
@@ -55,7 +72,8 @@ The report should be:
 - Quantitative: Include specific numbers, basis points, dollar amounts, and percentages
 - Actionable: Provide clear recommendations with timeframes
 - Concise: Executive summary style, focusing on material items
-- Professional: Suitable for board-level presentation`;
+- Professional: Suitable for board-level presentation
+- Context-aware: Reference macroeconomic conditions when making recommendations`;
 
     const userPrompt = `Generate an ALCO executive report based on the following data:
 
@@ -67,7 +85,7 @@ CURRENT METRICS:
 - DV01: $${(body.metrics.dv01 / 1000).toFixed(0)}K
 - Liquidity Survival Horizon: ${body.metrics.survivalHorizon} days
 - Active Alerts: ${body.metrics.alertCount}
-
+${macroContext}
 SCENARIO RESULTS:
 ${body.scenarios.map(s => `- ${s.name}: NII ${s.niiImpact > 0 ? '+' : ''}${s.niiImpact.toFixed(1)}%, EVE ${s.eveImpact > 0 ? '+' : ''}${s.eveImpact.toFixed(1)}%`).join('\n')}
 
@@ -89,18 +107,20 @@ Generate a comprehensive ALCO report with these sections:
 
 Remember: PLAIN TEXT ONLY, no markdown formatting.`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'gpt-4o',
         max_tokens: 4096,
-        system: systemPrompt,
         messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
           {
             role: 'user',
             content: userPrompt,
@@ -111,7 +131,7 @@ Remember: PLAIN TEXT ONLY, no markdown formatting.`;
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Anthropic API error:', error);
+      console.error('OpenAI API error:', error);
       return NextResponse.json({
         success: true,
         report: generateMockReport(body),
@@ -121,7 +141,7 @@ Remember: PLAIN TEXT ONLY, no markdown formatting.`;
     }
 
     const data = await response.json();
-    const reportContent = data.content[0]?.text || generateMockReport(body);
+    const reportContent = data.choices?.[0]?.message?.content || generateMockReport(body);
 
     return NextResponse.json({
       success: true,
@@ -228,6 +248,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     service: 'ALM Report Generator',
-    hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    hasFredKey: !!process.env.FRED_API_KEY,
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   LineChart,
@@ -12,15 +12,63 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format } from 'date-fns';
-import { Globe, TrendingUp, TrendingDown, Info, Sliders } from 'lucide-react';
+import { Globe, TrendingUp, TrendingDown, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
 
+interface FredData {
+  latest: {
+    fedFundsRate: number;
+    treasury10Y: number;
+    treasury2Y: number;
+    treasury5Y: number;
+    treasury30Y: number;
+    yieldCurveSpread: number;
+    unemploymentRate: number;
+    mortgage30Y: number;
+    primeRate: number;
+    asOfDate: string;
+  };
+  series: Record<string, { date: string; value: number }[]>;
+  mode: 'live' | 'demo';
+}
+
 export default function MacroPage() {
-  const { isLoading, macroSeries, depositProducts } = useALM();
+  const { isLoading, macroSeries } = useALM();
   const [selectedLag, setSelectedLag] = useState(0);
   const [selectedRegime, setSelectedRegime] = useState<'all' | 'rising' | 'falling'>('all');
+  const [fredData, setFredData] = useState<FredData | null>(null);
+  const [fredLoading, setFredLoading] = useState(false);
+  const [fredError, setFredError] = useState<string | null>(null);
+
+  // Fetch FRED data on mount
+  useEffect(() => {
+    fetchFredData();
+  }, []);
+
+  const fetchFredData = async () => {
+    setFredLoading(true);
+    setFredError(null);
+    try {
+      const response = await fetch('/api/alm/fred');
+      const data = await response.json();
+      if (data.success || data.latest) {
+        setFredData({
+          latest: data.latest,
+          series: data.series,
+          mode: data.mode || 'demo',
+        });
+      } else {
+        setFredError(data.error || 'Failed to fetch FRED data');
+      }
+    } catch (error) {
+      setFredError('Network error fetching FRED data');
+      console.error('FRED fetch error:', error);
+    } finally {
+      setFredLoading(false);
+    }
+  };
 
   // Correlation matrix data
   const correlationMatrix = useMemo(() => {
@@ -73,10 +121,21 @@ export default function MacroPage() {
     ];
   }, []);
 
-  // Chart data for macro series
+  // Chart data for macro series - prefer FRED data if available
   const macroChartData = useMemo(() => {
-    if (!macroSeries || macroSeries.length === 0) return [];
+    // Use FRED data if available
+    if (fredData?.series?.FEDFUNDS && fredData.series.FEDFUNDS.length > 0) {
+      return fredData.series.FEDFUNDS
+        .slice(0, 24)
+        .reverse()
+        .map((point) => ({
+          date: format(new Date(point.date), 'MMM yy'),
+          fedFunds: point.value,
+        }));
+    }
 
+    // Fall back to ALM context data
+    if (!macroSeries || macroSeries.length === 0) return [];
     const fedFunds = macroSeries.find((s) => s.id === 'fed_funds');
     if (!fedFunds) return [];
 
@@ -84,7 +143,19 @@ export default function MacroPage() {
       date: format(new Date(point.date), 'MMM yy'),
       fedFunds: point.value,
     }));
-  }, [macroSeries]);
+  }, [macroSeries, fredData]);
+
+  // Treasury curve data from FRED
+  const treasuryCurveData = useMemo(() => {
+    if (!fredData?.latest) return null;
+    return [
+      { tenor: '3M', rate: fredData.series?.DGS3MO?.[0]?.value },
+      { tenor: '2Y', rate: fredData.latest.treasury2Y },
+      { tenor: '5Y', rate: fredData.latest.treasury5Y },
+      { tenor: '10Y', rate: fredData.latest.treasury10Y },
+      { tenor: '30Y', rate: fredData.latest.treasury30Y },
+    ].filter(p => p.rate !== undefined);
+  }, [fredData]);
 
   if (isLoading) {
     return (
@@ -110,7 +181,62 @@ export default function MacroPage() {
             Analyze relationships between macro variables and deposit behavior
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          {fredData && (
+            <div className="flex items-center gap-2 text-sm">
+              {fredData.mode === 'live' ? (
+                <span className="badge-success flex items-center gap-1">
+                  <Wifi className="w-3 h-3" />
+                  FRED Live
+                </span>
+              ) : (
+                <span className="badge-warning flex items-center gap-1">
+                  <WifiOff className="w-3 h-3" />
+                  Demo Data
+                </span>
+              )}
+              {fredData.latest?.asOfDate && (
+                <span className="text-alm-text-muted text-xs">
+                  As of {fredData.latest.asOfDate}
+                </span>
+              )}
+            </div>
+          )}
+          <button
+            onClick={fetchFredData}
+            disabled={fredLoading}
+            className="btn-secondary"
+          >
+            <RefreshCw className={cn('w-4 h-4 mr-2', fredLoading && 'animate-spin')} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Live Rates Panel */}
+      {fredData?.latest && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {[
+            { label: 'Fed Funds', value: fredData.latest.fedFundsRate, suffix: '%' },
+            { label: '2Y Treasury', value: fredData.latest.treasury2Y, suffix: '%' },
+            { label: '10Y Treasury', value: fredData.latest.treasury10Y, suffix: '%' },
+            { label: '30Y Treasury', value: fredData.latest.treasury30Y, suffix: '%' },
+            { label: '2s10s Spread', value: fredData.latest.yieldCurveSpread, suffix: 'bp', multiplier: 100 },
+            { label: 'Prime Rate', value: fredData.latest.primeRate, suffix: '%' },
+            { label: '30Y Mortgage', value: fredData.latest.mortgage30Y, suffix: '%' },
+            { label: 'Unemployment', value: fredData.latest.unemploymentRate, suffix: '%' },
+          ].map((item) => (
+            <div key={item.label} className="premium-card p-3">
+              <p className="text-xs text-alm-text-muted truncate">{item.label}</p>
+              <p className="text-lg font-bold">
+                {item.value !== undefined
+                  ? `${(item.multiplier ? item.value * item.multiplier : item.value).toFixed(2)}${item.suffix}`
+                  : 'N/A'}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex items-center gap-6 p-4 premium-card">

@@ -20,6 +20,24 @@ export default function ReportPage() {
     setError(null);
 
     try {
+      // Fetch FRED macro data first
+      let macroData = null;
+      try {
+        const fredResponse = await fetch('/api/alm/fred');
+        const fredData = await fredResponse.json();
+        if (fredData.success && fredData.latest) {
+          macroData = {
+            fedFundsRate: fredData.latest.fedFundsRate,
+            treasury10Y: fredData.latest.treasury10Y,
+            treasury2Y: fredData.latest.treasury2Y,
+            unemploymentRate: fredData.latest.unemploymentRate,
+            cpi: fredData.latest.cpi,
+          };
+        }
+      } catch (fredError) {
+        console.log('FRED data not available, continuing without macro context');
+      }
+
       // Prepare metrics data for API
       const baseMetrics = metrics?.['base'];
       const upMetrics = metrics?.['up_200'];
@@ -50,6 +68,7 @@ export default function ReportPage() {
           title: a.title,
           description: a.description,
         })) || [],
+        macroData,
       };
 
       const response = await fetch('/api/alm/report', {
