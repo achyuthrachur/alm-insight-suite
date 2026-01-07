@@ -116,9 +116,9 @@ export default function AssumptionsPage() {
     if (!assumptionLibrary?.loanAssumptions) return [];
     return assumptionLibrary.loanAssumptions.map((loan) => ({
       name: loan.productName.split(' ').slice(0, 2).join(' '),
-      baseCPR: loan.prepayment.baseCPR,
-      stressCPR: loan.prepayment.stressCPR,
-      seasonality: loan.prepayment.seasonalityFactor,
+      baseCPR: loan.prepayment.baselineCPR,
+      stressCPR: loan.prepayment.incentiveCPR,
+      seasonality: loan.prepayment.seasonalityAdjustment[0] || 1,
     }));
   }, [assumptionLibrary]);
 
@@ -127,9 +127,9 @@ export default function AssumptionsPage() {
     if (!assumptionLibrary?.loanAssumptions) return [];
     return assumptionLibrary.loanAssumptions.map((loan) => ({
       name: loan.productName.split(' ').slice(0, 2).join(' '),
-      pd: loan.creditAssumptions.pdBase * 100,
-      lgd: loan.creditAssumptions.lgd * 100,
-      el: loan.creditAssumptions.expectedLoss * 100,
+      pd: loan.creditAssumptions.pdRate,
+      lgd: loan.creditAssumptions.lgdRate,
+      el: loan.creditAssumptions.expectedLossRate * 100,
     }));
   }, [assumptionLibrary]);
 
@@ -137,10 +137,10 @@ export default function AssumptionsPage() {
   const basisRiskData = useMemo(() => {
     if (!assumptionLibrary?.basisRisks) return [];
     return assumptionLibrary.basisRisks.map((basis) => ({
-      name: `${basis.baseIndex} vs ${basis.targetIndex}`,
-      avgSpread: basis.averageSpread * 100,
-      volatility: basis.spreadVolatility * 100,
-      stressSpread: basis.stressSpread * 100,
+      name: `${basis.indexPair.index1} vs ${basis.indexPair.index2}`,
+      avgSpread: basis.currentSpread,
+      volatility: basis.volatility,
+      stressSpread: basis.stressSpread,
     }));
   }, [assumptionLibrary]);
 
@@ -591,23 +591,23 @@ export default function AssumptionsPage() {
                         ${(loan.balance / 1000000).toFixed(0)}M
                       </td>
                       <td className="p-3 text-right tabular-nums">
-                        {loan.prepayment.baseCPR.toFixed(1)}%
+                        {loan.prepayment.baselineCPR.toFixed(1)}%
                       </td>
                       <td className="p-3 text-right tabular-nums text-alm-warning">
-                        {loan.prepayment.stressCPR.toFixed(1)}%
+                        {loan.prepayment.incentiveCPR.toFixed(1)}%
                       </td>
                       <td className="p-3 text-right tabular-nums">
                         {(loan.pricingBeta.levelBeta * 100).toFixed(1)}%
                       </td>
-                      <td className="p-3 text-right text-xs">{loan.pricingBeta.referenceIndex}</td>
+                      <td className="p-3 text-right text-xs">{loan.pricingBeta.indexType}</td>
                       <td className="p-3 text-right tabular-nums text-alm-danger">
-                        {(loan.creditAssumptions.pdBase * 100).toFixed(2)}%
+                        {(loan.creditAssumptions.pdRate * 100).toFixed(2)}%
                       </td>
                       <td className="p-3 text-right tabular-nums">
-                        {(loan.creditAssumptions.lgd * 100).toFixed(0)}%
+                        {(loan.creditAssumptions.lgdRate * 100).toFixed(0)}%
                       </td>
                       <td className="p-3 text-right text-xs">
-                        {loan.repricingAssumptions.frequency}
+                        {loan.repricingAssumptions.repricingFrequency}
                       </td>
                     </tr>
                   ))}
@@ -628,7 +628,7 @@ export default function AssumptionsPage() {
           >
             <div className="space-y-4 p-2">
               {assumptionLibrary?.loanAssumptions
-                ?.filter((l) => l.repricingAssumptions.frequency !== 'fixed')
+                ?.filter((l) => l.repricingAssumptions.repricingFrequency !== 'fixed')
                 .map((loan) => (
                   <div
                     key={loan.productId}
@@ -636,7 +636,7 @@ export default function AssumptionsPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">{loan.productName}</span>
-                      <span className="badge-neutral">{loan.repricingAssumptions.frequency}</span>
+                      <span className="badge-neutral">{loan.repricingAssumptions.repricingFrequency}</span>
                     </div>
                     <div className="grid grid-cols-4 gap-4 text-sm">
                       <div>
@@ -757,12 +757,12 @@ export default function AssumptionsPage() {
             <div className="space-y-4 p-2">
               {assumptionLibrary?.basisRisks?.map((basis) => (
                 <div
-                  key={`${basis.baseIndex}-${basis.targetIndex}`}
+                  key={`${basis.indexPair.index1}-${basis.indexPair.index2}`}
                   className="p-4 rounded-lg bg-slate-50 dark:bg-alm-bg-tertiary"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-medium">
-                      {basis.baseIndex} vs {basis.targetIndex}
+                      {basis.indexPair.index1} vs {basis.indexPair.index2}
                     </span>
                     <span className="text-sm text-alm-accent font-medium">
                       {(basis.correlation * 100).toFixed(0)}% correlated
@@ -771,11 +771,11 @@ export default function AssumptionsPage() {
                   <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-alm-text-muted">Avg Spread</p>
-                      <p className="font-medium">{(basis.averageSpread * 100).toFixed(1)} bps</p>
+                      <p className="font-medium">{(basis.currentSpread * 100).toFixed(1)} bps</p>
                     </div>
                     <div>
                       <p className="text-alm-text-muted">Volatility</p>
-                      <p className="font-medium">{(basis.spreadVolatility * 100).toFixed(1)} bps</p>
+                      <p className="font-medium">{(basis.volatility * 100).toFixed(1)} bps</p>
                     </div>
                     <div>
                       <p className="text-alm-text-muted">Stress</p>
