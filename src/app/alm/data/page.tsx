@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { cn } from '@/lib/utils/cn';
+import type { CurvePoint } from '@/lib/alm/types';
 import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 interface DataSet {
@@ -223,12 +224,12 @@ export default function DataExplorerPage() {
         return curves?.slice(0, limit).map(c => ({
           curveId: c.curveId,
           scenarioId: c.scenarioId,
-          '3mo': c.points.find((p: any) => p.tenor === '3M')?.spotRate?.toFixed(2) + '%' || '-',
-          '1yr': c.points.find((p: any) => p.tenor === '1Y')?.spotRate?.toFixed(2) + '%' || '-',
-          '2yr': c.points.find((p: any) => p.tenor === '2Y')?.spotRate?.toFixed(2) + '%' || '-',
-          '5yr': c.points.find((p: any) => p.tenor === '5Y')?.spotRate?.toFixed(2) + '%' || '-',
-          '10yr': c.points.find((p: any) => p.tenor === '10Y')?.spotRate?.toFixed(2) + '%' || '-',
-          '30yr': c.points.find((p: any) => p.tenor === '30Y')?.spotRate?.toFixed(2) + '%' || '-',
+          '3mo': c.points.find((p: CurvePoint) => p.tenorLabel === '3M')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '3M')!.rate * 100).toFixed(2) + '%' : '-',
+          '1yr': c.points.find((p: CurvePoint) => p.tenorLabel === '1Y')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '1Y')!.rate * 100).toFixed(2) + '%' : '-',
+          '2yr': c.points.find((p: CurvePoint) => p.tenorLabel === '2Y')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '2Y')!.rate * 100).toFixed(2) + '%' : '-',
+          '5yr': c.points.find((p: CurvePoint) => p.tenorLabel === '5Y')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '5Y')!.rate * 100).toFixed(2) + '%' : '-',
+          '10yr': c.points.find((p: CurvePoint) => p.tenorLabel === '10Y')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '10Y')!.rate * 100).toFixed(2) + '%' : '-',
+          '30yr': c.points.find((p: CurvePoint) => p.tenorLabel === '30Y')?.rate !== undefined ? (c.points.find((p: CurvePoint) => p.tenorLabel === '30Y')!.rate * 100).toFixed(2) + '%' : '-',
         }));
       case 'deposits':
         return depositProducts?.slice(0, limit).map(d => ({
