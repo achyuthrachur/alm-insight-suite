@@ -70,20 +70,45 @@ const isValidALMDemoData = (data: ReturnType<typeof getALMDemoData>) => {
     return false;
   }
 
+  if (!isArray(data.scenarioSet.scenarios)) {
+    return false;
+  }
+
   if (
     !isArray(data.curves) ||
+    !data.curves.every((curve) => isArray(curve.points)) ||
     !isArray(data.positions) ||
     !isArray(data.depositProducts) ||
+    !data.depositProducts.every(
+      (product) =>
+        product &&
+        isArray(product.observedRates) &&
+        isArray(product.modeledRates) &&
+        product.beta &&
+        isArray(product.beta.timeVaryingBeta) &&
+        product.decay &&
+        isArray(product.decay.survivalCurve)
+    ) ||
     !isArray(data.macroSeries) ||
+    !data.macroSeries.every((series) => isArray(series.points)) ||
     !isArray(data.assumptionSets) ||
+    !data.assumptionSets.every((set) => isArray(set.parameters)) ||
     !isArray(data.alerts) ||
     !isArray(data.hedges) ||
-    !isArray(data.backtests)
+    !isArray(data.backtests) ||
+    !data.backtests.every(
+      (backtest) => isArray(backtest.forecasts) && isArray(backtest.realized)
+    )
   ) {
     return false;
   }
 
-  if (!data.liquidity || !isArray(data.liquidity.cashflowLadder)) {
+  if (
+    !data.liquidity ||
+    !isArray(data.liquidity.cashflowLadder) ||
+    !isArray(data.liquidity.fundingConcentrations) ||
+    !isArray(data.liquidity.contingencyReadiness)
+  ) {
     return false;
   }
 
