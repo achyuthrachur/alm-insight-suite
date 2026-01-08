@@ -290,7 +290,8 @@ export const ALM_GLOSSARY = {
 export function getTooltip(key: keyof typeof ALM_GLOSSARY, detailed = false): string {
   const entry = ALM_GLOSSARY[key];
   if (detailed) {
-    return `${entry.term} (${entry.short}): ${entry.simpleExplanation}${entry.example ? ` Example: ${entry.example}` : ''}`;
+    const example = 'example' in entry ? entry.example : undefined;
+    return `${entry.term} (${entry.short}): ${entry.simpleExplanation}${example ? ` Example: ${example}` : ''}`;
   }
   return `${entry.term}: ${entry.simpleExplanation}`;
 }
