@@ -206,7 +206,7 @@ export default function DataExplorerPage() {
           balance: `$${(p.balance / 1_000_000).toFixed(1)}M`,
           coupon: p.coupon ? `${(p.coupon * 100).toFixed(2)}%` : '-',
           rateType: p.rateType,
-          repricingDate: p.repricingDate ? safeFormatDate(p.repricingDate, 'MMM yyyy') : '-',
+          nextRepriceDate: p.nextRepriceDate ? safeFormatDate(p.nextRepriceDate, 'MMM yyyy') : '-',
           maturityDate: p.maturityDate ? safeFormatDate(p.maturityDate, 'MMM yyyy') : '-',
           duration: p.duration?.toFixed(2) || '-',
         }));
@@ -257,7 +257,8 @@ export default function DataExplorerPage() {
         assumptionSets?.forEach(set => {
           set.parameters.forEach(p => {
             allParams.push({
-              category: set.category,
+              setName: set.name,
+              category: p.category,
               key: p.key,
               label: p.label,
               value: typeof p.value === 'number' ? p.value.toFixed(4) : String(p.value),
@@ -292,8 +293,8 @@ export default function DataExplorerPage() {
           type: h.type,
           description: h.description,
           notional: `$${(h.notional / 1_000_000).toFixed(0)}M`,
-          fixedRate: h.fixedRate ? `${(h.fixedRate * 100).toFixed(2)}%` : '-',
-          floatingIndex: h.floatingIndex || '-',
+          fixedRate: h.payLeg?.rate ? `${(h.payLeg.rate * 100).toFixed(2)}%` : (h.receiveLeg?.rate ? `${(h.receiveLeg.rate * 100).toFixed(2)}%` : '-'),
+          floatingIndex: h.payLeg?.index || h.receiveLeg?.index || '-',
           mtm: `$${(h.marketValue / 1_000_000).toFixed(1)}M`,
           maturity: safeFormatDate(h.maturityDate, 'MMM yyyy'),
           dv01: h.dv01 ? `$${(h.dv01 / 1000).toFixed(0)}K` : '-',
