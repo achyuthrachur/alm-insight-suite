@@ -65,6 +65,32 @@ const DEFAULT_FILTERS: GlobalFilters = {
 
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
+const RUNTIME_ID_STORAGE_KEY = 'alm-runtime-id';
+
+const getRuntimeId = () => {
+  if (typeof window === 'undefined') return null;
+  const nextData = (window as Window & { __NEXT_DATA__?: { buildId?: string } }).__NEXT_DATA__;
+  if (typeof nextData?.buildId === 'string' && nextData.buildId.length > 0) {
+    return nextData.buildId;
+  }
+  const webpackHash = (window as Window & { __webpack_hash__?: string }).__webpack_hash__;
+  return typeof webpackHash === 'string' && webpackHash.length > 0 ? webpackHash : null;
+};
+
+const ensureFreshRuntimeData = () => {
+  const runtimeId = getRuntimeId();
+  if (!runtimeId) return;
+  try {
+    const stored = sessionStorage.getItem(RUNTIME_ID_STORAGE_KEY);
+    if (stored !== runtimeId) {
+      sessionStorage.setItem(RUNTIME_ID_STORAGE_KEY, runtimeId);
+      resetALMDemoData();
+    }
+  } catch {
+    // Ignore storage failures (private mode or locked storage)
+  }
+};
+
 const isValidALMDemoData = (data: ReturnType<typeof getALMDemoData>) => {
   if (!data?.currentRun || !data?.priorRun || !data?.scenarioSet || !data?.metrics) {
     return false;
@@ -152,6 +178,7 @@ export function useALMData(): UseALMDataReturn {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
+      ensureFreshRuntimeData();
       const data = getALMDemoData();
 
       // Validate that critical data exists to catch stale cache issues early

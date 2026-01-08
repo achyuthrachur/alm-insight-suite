@@ -99,8 +99,14 @@ export function Header() {
                 </div>
                 {currentRun && (
                   <button
-                    className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-alm-bg-tertiary flex items-center justify-between"
-                    onClick={() => setShowRunSelector(false)}
+                    className={cn(
+                      'w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-alm-bg-tertiary flex items-center justify-between',
+                      filters.runId === currentRun.runId && 'bg-alm-accent/10'
+                    )}
+                    onClick={() => {
+                      setFilters({ runId: currentRun.runId });
+                      setShowRunSelector(false);
+                    }}
                   >
                     <div>
                       <p className="text-sm font-medium">{currentRun.label}</p>
@@ -108,13 +114,21 @@ export function Header() {
                         {safeFormatDate(currentRun.timestamp, 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
-                    <span className="badge-success">Current</span>
+                    <span className={filters.runId === currentRun.runId ? 'badge-success' : 'badge-neutral'}>
+                      {filters.runId === currentRun.runId ? 'Active' : 'Current'}
+                    </span>
                   </button>
                 )}
                 {priorRun && (
                   <button
-                    className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-alm-bg-tertiary flex items-center justify-between"
-                    onClick={() => setShowRunSelector(false)}
+                    className={cn(
+                      'w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-alm-bg-tertiary flex items-center justify-between',
+                      filters.runId === priorRun.runId && 'bg-alm-accent/10'
+                    )}
+                    onClick={() => {
+                      setFilters({ runId: priorRun.runId });
+                      setShowRunSelector(false);
+                    }}
                   >
                     <div>
                       <p className="text-sm font-medium">{priorRun.label}</p>
@@ -122,7 +136,9 @@ export function Header() {
                         {safeFormatDate(priorRun.timestamp, 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
-                    <span className="badge-neutral">Prior</span>
+                    <span className={filters.runId === priorRun.runId ? 'badge-success' : 'badge-neutral'}>
+                      {filters.runId === priorRun.runId ? 'Active' : 'Prior'}
+                    </span>
                   </button>
                 )}
               </div>

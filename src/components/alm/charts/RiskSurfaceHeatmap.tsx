@@ -10,26 +10,53 @@ interface RiskSurfaceHeatmapProps {
   metrics: Record<string, RiskMetrics>;
   scenarios: Scenario[];
   metricType: 'nii' | 'eve';
+  selectedScenarios?: string[];
+  selectedHorizon?: string;
   onCellClick?: (scenarioId: string, horizon: string) => void;
   className?: string;
 }
 
-const HORIZONS = ['3m', '6m', '12m', '24m'];
+const ALL_HORIZONS = ['3m', '6m', '12m', '24m'];
 
 export function RiskSurfaceHeatmap({
   metrics,
   scenarios,
   metricType,
+  selectedScenarios,
+  selectedHorizon,
   onCellClick,
   className,
 }: RiskSurfaceHeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{ scenario: string; horizon: string } | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<'nii' | 'eve'>(metricType);
 
-  // Filter scenarios for display (exclude base)
+  // Determine which horizons to show based on selected horizon
+  const displayHorizons = useMemo(() => {
+    if (!selectedHorizon) return ALL_HORIZONS;
+    // Show horizons up to and including the selected horizon
+    const horizonIndex = ALL_HORIZONS.indexOf(selectedHorizon);
+    if (horizonIndex === -1) return ALL_HORIZONS;
+    // Always show at least 3 horizons for context, centered on selected
+    const minIndex = Math.max(0, horizonIndex - 1);
+    const maxIndex = Math.min(ALL_HORIZONS.length - 1, horizonIndex + 2);
+    return ALL_HORIZONS.slice(minIndex, maxIndex + 1);
+  }, [selectedHorizon]);
+
+  // Filter scenarios for display - use selected scenarios if provided, otherwise show all non-base
   const displayScenarios = useMemo(() => {
-    return scenarios.filter((s) => !s.isBase).slice(0, 7);
-  }, [scenarios]);
+    const nonBaseScenarios = scenarios.filter((s) => !s.isBase);
+
+    if (selectedScenarios && selectedScenarios.length > 0) {
+      // Filter to only selected scenarios (excluding 'base' from visual filter)
+      const selectedNonBase = nonBaseScenarios.filter(
+        (s) => selectedScenarios.includes(s.scenarioId)
+      );
+      // If no non-base scenarios are selected, show all non-base
+      return selectedNonBase.length > 0 ? selectedNonBase : nonBaseScenarios.slice(0, 7);
+    }
+
+    return nonBaseScenarios.slice(0, 7);
+  }, [scenarios, selectedScenarios]);
 
   // Calculate cell values and color scale
   const cellData = useMemo(() => {
@@ -41,7 +68,7 @@ export function RiskSurfaceHeatmap({
       const scenarioMetrics = metrics[scenario.scenarioId];
       if (!scenarioMetrics) continue;
 
-      for (const horizon of HORIZONS) {
+      for (const horizon of displayHorizons) {
         const value =
           selectedMetric === 'nii'
             ? scenarioMetrics.nii.impactPercent
@@ -65,7 +92,7 @@ export function RiskSurfaceHeatmap({
     }
 
     return { values, minValue, maxValue };
-  }, [displayScenarios, metrics, selectedMetric]);
+  }, [displayScenarios, displayHorizons, metrics, selectedMetric]);
 
   // Color interpolation
   const getColor = (value: number): string => {
@@ -142,7 +169,7 @@ export function RiskSurfaceHeatmap({
               <th className="text-left py-2 px-3 text-xs font-medium text-alm-text-muted">
                 Scenario
               </th>
-              {HORIZONS.map((horizon) => (
+              {displayHorizons.map((horizon) => (
                 <th
                   key={horizon}
                   className="text-center py-2 px-3 text-xs font-medium text-alm-text-muted uppercase"
@@ -163,7 +190,7 @@ export function RiskSurfaceHeatmap({
                     <span className="text-xxs text-alm-text-muted">{scenario.name}</span>
                   </div>
                 </td>
-                {HORIZONS.map((horizon, colIdx) => {
+                {displayHorizons.map((horizon, colIdx) => {
                   const cell = cellData.values.find(
                     (v) => v.scenario === scenario.scenarioId && v.horizon === horizon
                   );
