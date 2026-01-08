@@ -421,3 +421,12 @@ export type GlossaryKey = keyof typeof ALM_GLOSSARY;
 export type ModuleKey = keyof typeof MODULE_DESCRIPTIONS;
 export type ChartKey = keyof typeof CHART_EXPLANATIONS;
 export type ScenarioKey = keyof typeof SCENARIO_EXPLANATIONS;
+
+// Type for individual glossary entries
+export interface GlossaryEntry {
+  term: string;
+  short: string;
+  definition: string;
+  simpleExplanation: string;
+  example?: string;
+}

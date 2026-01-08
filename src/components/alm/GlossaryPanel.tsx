@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, X, Search, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
-import { ALM_GLOSSARY, GlossaryKey } from '@/lib/alm/glossary';
+import { ALM_GLOSSARY, GlossaryKey, GlossaryEntry } from '@/lib/alm/glossary';
 import { cn } from '@/lib/utils/cn';
 
 interface GlossaryPanelProps {
@@ -140,7 +140,7 @@ export function GlossaryPanel({ isOpen, onClose }: GlossaryPanelProps) {
                         >
                           <div className="ml-6 mt-2 space-y-3">
                             {filteredTerms.map(key => {
-                              const entry = ALM_GLOSSARY[key];
+                              const entry = ALM_GLOSSARY[key] as GlossaryEntry;
                               return (
                                 <div
                                   key={key}
