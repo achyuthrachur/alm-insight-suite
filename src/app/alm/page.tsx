@@ -33,6 +33,7 @@ import { KPICard } from '@/components/alm/cards/KPICard';
 import { AlertsFeed } from '@/components/alm/cards/AlertsFeed';
 import { RiskSurfaceHeatmap } from '@/components/alm/charts/RiskSurfaceHeatmap';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 export default function ALMOverviewPage() {
   const {
@@ -176,27 +177,32 @@ export default function ALMOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            ALCO Flight Deck
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Asset-Liability Management Overview •{' '}
-            {currentRun ? safeFormatDate(currentRun.timestamp, 'MMMM d, yyyy') : 'Loading...'}
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.overview.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.overview.subtitle} •{' '}
+              {currentRun ? safeFormatDate(currentRun.timestamp, 'MMMM d, yyyy') : 'Loading...'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="badge-success">DEMO MODE</span>
+            {currentRun && (
+              <span className="text-sm text-alm-text-muted">
+                Data Quality: {currentRun.dataQualityScore}%
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="badge-success">DEMO MODE</span>
-          {currentRun && (
-            <span className="text-sm text-alm-text-muted">
-              Data Quality: {currentRun.dataQualityScore}%
-            </span>
-          )}
-        </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.overview.description}
+        </p>
       </div>
 
-      {/* KPI Strip */}
+      {/* KPI Strip - Key Performance Indicators */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <KPICard
           title="NII @ 12M"
@@ -205,7 +211,7 @@ export default function ALMOverviewPage() {
           delta={2.3}
           trend="up"
           status="good"
-          tooltip="Net Interest Income projection over 12 months under base scenario"
+          tooltip="Net Interest Income (NII): The bank's profit from lending money at higher rates than it pays on deposits. This shows projected NII over 12 months under the base rate scenario. Higher is better."
           onClick={() => {}}
         />
         <KPICard
@@ -215,7 +221,7 @@ export default function ALMOverviewPage() {
           delta={-0.8}
           trend="down"
           status={kpiData && Math.abs(kpiData.eveImpact) > 12 ? 'bad' : 'warning'}
-          tooltip="Economic Value of Equity sensitivity under +200bp parallel shock"
+          tooltip="Economic Value of Equity (EVE) Change: How much the bank's total value would change if interest rates rise by 2% (200 basis points). A negative number means the bank loses value when rates rise. Most banks target less than -15%."
         />
         <KPICard
           title="DOE"
@@ -223,7 +229,7 @@ export default function ALMOverviewPage() {
           unit="yrs"
           trend="flat"
           status={kpiData && kpiData.doe > 8 ? 'warning' : 'good'}
-          tooltip="Duration of Equity - interest rate sensitivity measure"
+          tooltip="Duration of Equity (DOE): Measures how sensitive the bank's value is to rate changes. A DOE of 6 years means a 1% rate rise causes roughly a 6% drop in equity value. Lower duration = less interest rate risk."
         />
         <KPICard
           title="NIM"
@@ -232,7 +238,7 @@ export default function ALMOverviewPage() {
           delta={0.05}
           trend="up"
           status="good"
-          tooltip="Net Interest Margin"
+          tooltip="Net Interest Margin (NIM): The percentage profit earned on each dollar of earning assets. Calculated as NII divided by average assets. Typical bank NIMs range from 2.5% to 4%. Higher margins indicate better profitability."
         />
         <KPICard
           title="DV01"
@@ -240,7 +246,7 @@ export default function ALMOverviewPage() {
           unit="K"
           trend="flat"
           status="neutral"
-          tooltip="Dollar Value of 1 basis point - P&L impact per bp rate change"
+          tooltip="Dollar Value of 01 (DV01): The dollar amount gained or lost for every 0.01% (1 basis point) move in interest rates. A DV01 of $1,250K means each basis point change affects earnings by $1.25 million."
         />
         <KPICard
           title="Liquidity"
@@ -249,13 +255,13 @@ export default function ALMOverviewPage() {
           delta={5}
           trend="up"
           status={liquidity && liquidity.survivalHorizon >= liquidity.survivalHorizonTarget ? 'good' : 'warning'}
-          tooltip="Liquidity survival horizon under stress"
+          tooltip="Survival Horizon: How many days the bank can meet all cash obligations under a severe stress scenario without any new funding. Regulatory minimum is typically 30 days; 90+ days is considered strong."
         />
         <KPICard
           title="Alerts"
           value={kpiData ? kpiData.breachCount + kpiData.warningCount : '-'}
           status={kpiData && kpiData.breachCount > 0 ? 'bad' : kpiData && kpiData.warningCount > 0 ? 'warning' : 'good'}
-          tooltip="Active limit breaches and warnings"
+          tooltip="Active Alerts: Number of risk metrics that have exceeded limits (breaches) or are approaching limits (warnings). Zero alerts is ideal. Any breaches require immediate management attention and board notification."
           onClick={() => {}}
         />
       </div>

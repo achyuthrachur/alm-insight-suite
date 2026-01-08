@@ -29,6 +29,7 @@ import { FlaskConical, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } fr
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 export default function BacktestingPage() {
   const { isLoading, backtests } = useALM();
@@ -76,15 +77,20 @@ export default function BacktestingPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Backtesting & Model Risk
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Forecast vs realized analysis and model performance monitoring
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.backtesting.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.backtesting.subtitle}
+            </p>
+          </div>
         </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.backtesting.description}
+        </p>
       </div>
 
       {/* Summary Cards */}

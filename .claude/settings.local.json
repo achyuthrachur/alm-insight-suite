@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(npx next build)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(cd:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)"
     ]
   }
 }

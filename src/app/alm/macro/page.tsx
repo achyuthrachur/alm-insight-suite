@@ -28,6 +28,7 @@ import { Globe, TrendingUp, TrendingDown, RefreshCw, Wifi, WifiOff } from 'lucid
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 interface FredData {
   latest: {
@@ -184,45 +185,50 @@ export default function MacroPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Macro Sensitivity - Regime & Lag Studio
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Analyze relationships between macro variables and deposit behavior
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.macro.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.macro.subtitle}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {fredData && (
+              <div className="flex items-center gap-2 text-sm">
+                {fredData.mode === 'live' ? (
+                  <span className="badge-success flex items-center gap-1">
+                    <Wifi className="w-3 h-3" />
+                    FRED Live
+                  </span>
+                ) : (
+                  <span className="badge-warning flex items-center gap-1">
+                    <WifiOff className="w-3 h-3" />
+                    Demo Data
+                  </span>
+                )}
+                {fredData.latest?.asOfDate && (
+                  <span className="text-alm-text-muted text-xs">
+                    As of {fredData.latest.asOfDate}
+                  </span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={fetchFredData}
+              disabled={fredLoading}
+              className="btn-secondary"
+            >
+              <RefreshCw className={cn('w-4 h-4 mr-2', fredLoading && 'animate-spin')} />
+              Refresh
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {fredData && (
-            <div className="flex items-center gap-2 text-sm">
-              {fredData.mode === 'live' ? (
-                <span className="badge-success flex items-center gap-1">
-                  <Wifi className="w-3 h-3" />
-                  FRED Live
-                </span>
-              ) : (
-                <span className="badge-warning flex items-center gap-1">
-                  <WifiOff className="w-3 h-3" />
-                  Demo Data
-                </span>
-              )}
-              {fredData.latest?.asOfDate && (
-                <span className="text-alm-text-muted text-xs">
-                  As of {fredData.latest.asOfDate}
-                </span>
-              )}
-            </div>
-          )}
-          <button
-            onClick={fetchFredData}
-            disabled={fredLoading}
-            className="btn-secondary"
-          >
-            <RefreshCw className={cn('w-4 h-4 mr-2', fredLoading && 'animate-spin')} />
-            Refresh
-          </button>
-        </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.macro.description}
+        </p>
       </div>
 
       {/* Live Rates Panel */}

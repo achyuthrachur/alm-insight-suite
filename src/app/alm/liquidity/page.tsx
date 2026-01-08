@@ -19,6 +19,7 @@ import { Droplets, AlertTriangle, Check, Clock, Shield, TrendingUp } from 'lucid
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 export default function LiquidityPage() {
   const { isLoading, liquidity } = useALM();
@@ -67,15 +68,20 @@ export default function LiquidityPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Liquidity & Funding
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Cashflow projections, funding analysis, and contingency readiness
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.liquidity.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.liquidity.subtitle}
+            </p>
+          </div>
         </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.liquidity.description}
+        </p>
       </div>
 
       {/* Key Metrics */}

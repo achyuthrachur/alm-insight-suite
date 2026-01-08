@@ -38,6 +38,7 @@ import {
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 // Safe date formatting helper to handle Date objects and ISO strings
 const safeFormatDate = (date: Date | string, formatStr: string): string => {
@@ -180,28 +181,33 @@ export default function AssumptionsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            ALM Assumptions Library
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Deposit betas, loan assumptions, repricing, and historical tracking
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.assumptions.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.assumptions.subtitle}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDiff(!showDiff)}
+              className={cn('btn-secondary', showDiff && 'bg-alm-accent/10 border-alm-accent')}
+            >
+              <GitCompare className="w-4 h-4 mr-2" />
+              Compare Versions
+            </button>
+            <button className="btn-primary">
+              <Download className="w-4 h-4 mr-2" />
+              Export Pack
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowDiff(!showDiff)}
-            className={cn('btn-secondary', showDiff && 'bg-alm-accent/10 border-alm-accent')}
-          >
-            <GitCompare className="w-4 h-4 mr-2" />
-            Compare Versions
-          </button>
-          <button className="btn-primary">
-            <Download className="w-4 h-4 mr-2" />
-            Export Pack
-          </button>
-        </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.assumptions.description}
+        </p>
       </div>
 
       {/* Summary KPIs */}

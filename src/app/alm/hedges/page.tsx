@@ -29,6 +29,7 @@ import {
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS } from '@/lib/alm/glossary';
 
 export default function HedgesPage() {
   const { isLoading, hedges, metrics } = useALM();
@@ -69,22 +70,27 @@ export default function HedgesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Hedges & Strategy Lab
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Manage hedge inventory and analyze strategy options
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.hedges.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.hedges.subtitle}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowStrategy(!showStrategy)}
+            className={cn('btn-primary', showStrategy && 'bg-alm-accent-hover')}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Strategy Lab
+          </button>
         </div>
-        <button
-          onClick={() => setShowStrategy(!showStrategy)}
-          className={cn('btn-primary', showStrategy && 'bg-alm-accent-hover')}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Strategy Lab
-        </button>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.hedges.description}
+        </p>
       </div>
 
       {/* Summary Cards */}

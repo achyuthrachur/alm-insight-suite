@@ -33,6 +33,7 @@ import { TrendingUp, TrendingDown, Activity, Sliders, Info } from 'lucide-react'
 import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS, CHART_EXPLANATIONS } from '@/lib/alm/glossary';
 
 export default function DepositsPage() {
   const { isLoading, depositProducts, macroSeries } = useALM();
@@ -129,15 +130,20 @@ export default function DepositsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Deposits - Beta & Behavior Lab
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Deposit pricing sensitivity and behavioral analysis
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.deposits.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.deposits.subtitle}
+            </p>
+          </div>
         </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.deposits.description}
+        </p>
       </div>
 
       {/* Product Beta Cards */}
@@ -197,7 +203,7 @@ export default function DepositsPage() {
         <ChartContainer
           title="Deposit Rate vs Market Rate"
           subtitle={selectedProductData ? `${selectedProductData.productName} regression analysis` : ''}
-          tooltip="Scatter plot showing relationship between deposit rates and market rates. The slope represents the deposit beta."
+          tooltip="Each dot shows one month's deposit rate (Y-axis) vs the Fed Funds rate (X-axis). The slope of the best-fit line is the 'beta' - how much deposit rates move when market rates move. A beta of 0.5 means if the Fed raises rates 1%, deposit rates rise only 0.5%. Lower beta = more profit for the bank when rates rise. R² shows how reliable the beta estimate is (higher = more consistent behavior)."
         >
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -280,7 +286,7 @@ export default function DepositsPage() {
         <ChartContainer
           title="Time-Varying Beta"
           subtitle="Beta stability over time with confidence band"
-          tooltip="Shows how the deposit beta has varied over the analysis period. Wider bands indicate less certainty."
+          tooltip="This chart tracks how the deposit beta has changed over time. The line shows the estimated beta each month. The shaded area is the 'confidence band' - where we're 95% sure the true beta lies. A stable line with narrow bands means predictable deposit behavior. If the line jumps around or bands are wide, the deposit pricing is harder to predict."
         >
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -356,7 +362,7 @@ export default function DepositsPage() {
           <ChartContainer
             title="Deposit Survival Curve"
             subtitle="Decay profile and effective maturity"
-            tooltip="Shows the expected retention of deposits over time. The half-life indicates when 50% of deposits are expected to have decayed."
+            tooltip="This curve shows what percentage of today's deposits will still be at the bank over time. Deposits don't leave all at once - they 'decay' gradually as customers close accounts or move money. The 'half-life' (orange line) shows when 50% of deposits will have left. Longer half-life = more stable funding. 'Effective Maturity' is the average time deposits stay, used for ALM calculations."
           >
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">

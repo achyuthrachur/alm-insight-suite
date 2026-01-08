@@ -27,6 +27,7 @@ import { useALM } from '@/components/alm/providers/ALMProvider';
 import { ChartContainer } from '@/components/alm/charts/ChartContainer';
 import { YieldCurveViewer } from '@/components/alm/charts/YieldCurveViewer';
 import { cn } from '@/lib/utils/cn';
+import { MODULE_DESCRIPTIONS, CHART_EXPLANATIONS } from '@/lib/alm/glossary';
 
 export default function ScenariosPage() {
   const { isLoading, scenarioSet, curves, metrics, filters, setFilters } = useALM();
@@ -102,39 +103,44 @@ export default function ScenariosPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
-            Interest Rate Risk
-          </h1>
-          <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
-            Scenario analysis and sensitivity metrics
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-alm-text-dark dark:text-alm-text-primary">
+              {MODULE_DESCRIPTIONS.scenarios.title}
+            </h1>
+            <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-secondary mt-1">
+              {MODULE_DESCRIPTIONS.scenarios.subtitle}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('table')}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                viewMode === 'table'
+                  ? 'bg-alm-accent text-white'
+                  : 'text-alm-text-secondary hover:bg-slate-100 dark:hover:bg-alm-bg-tertiary'
+              )}
+            >
+              <BarChart3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                viewMode === 'cards'
+                  ? 'bg-alm-accent text-white'
+                  : 'text-alm-text-secondary hover:bg-slate-100 dark:hover:bg-alm-bg-tertiary'
+              )}
+            >
+              <LineChart className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('table')}
-            className={cn(
-              'p-2 rounded-lg transition-colors',
-              viewMode === 'table'
-                ? 'bg-alm-accent text-white'
-                : 'text-alm-text-secondary hover:bg-slate-100 dark:hover:bg-alm-bg-tertiary'
-            )}
-          >
-            <BarChart3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('cards')}
-            className={cn(
-              'p-2 rounded-lg transition-colors',
-              viewMode === 'cards'
-                ? 'bg-alm-accent text-white'
-                : 'text-alm-text-secondary hover:bg-slate-100 dark:hover:bg-alm-bg-tertiary'
-            )}
-          >
-            <LineChart className="w-4 h-4" />
-          </button>
-        </div>
+        <p className="text-sm text-alm-text-dark-secondary dark:text-alm-text-muted max-w-4xl leading-relaxed">
+          {MODULE_DESCRIPTIONS.scenarios.description}
+        </p>
       </div>
 
       {/* Yield Curve Viewer */}
@@ -151,7 +157,7 @@ export default function ScenariosPage() {
       <ChartContainer
         title="Scenario Comparison"
         subtitle="Key risk metrics across all scenarios"
-        tooltip="Compare NII and EVE sensitivity across different rate shock scenarios"
+        tooltip="This table shows how the bank performs under different interest rate scenarios. NII Impact shows change to 12-month earnings. EVE Impact shows change to total economic value. Click rows to select scenarios for the yield curve chart above. Green = positive impact (bank benefits), Red = negative impact (bank loses)."
       >
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -279,7 +285,7 @@ export default function ScenariosPage() {
         <ChartContainer
           title="Repricing Gap Ladder"
           subtitle="Asset vs liability repricing by time bucket"
-          tooltip="Shows the difference between assets and liabilities repricing in each time bucket. Positive gaps benefit from rising rates."
+          tooltip="This chart shows when assets (loans, securities) and liabilities (deposits, borrowings) will reprice to new rates. Green bars = assets repricing, Red bars = liabilities repricing. When assets exceed liabilities in a time bucket (positive gap), rising rates help the bank. When liabilities exceed assets (negative gap), falling rates help."
         >
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -332,7 +338,7 @@ export default function ScenariosPage() {
         <ChartContainer
           title="EVE Decomposition (+200bp)"
           subtitle="Sources of EVE change under rate stress"
-          tooltip="Waterfall showing how EVE changes from base to stressed scenario, broken down by component."
+          tooltip="This waterfall breaks down what causes the bank's value (EVE) to change when rates rise 200bp. 'Asset PV' shows how loan/security values change. 'Liability PV' shows how deposit/debt values change. 'Derivative PV' shows hedge impact. Purple bars are totals; green bars add value, red bars subtract value."
         >
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
