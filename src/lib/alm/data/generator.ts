@@ -245,8 +245,11 @@ export class ALMDataGenerator {
         } else if (scenario.scenarioId === 'down_200') {
           rate = Math.max(0.001, rate - 0.02);
         } else if (scenario.scenarioId === 'steepener') {
-          const factor = (tenor.months - 60) / 300; // -0.2 to +1.0
-          rate += factor * 0.01;
+          // Bull Steepener: short rates down 50bp, long rates up 50bp
+          // Linear interpolation from -50bp at 1M to +50bp at 360M
+          const normalized = (tenor.months - 1) / 359; // 0 at 1M, 1 at 360M
+          const shift = (normalized - 0.5) * 0.01; // -50bp at 1M, +50bp at 360M
+          rate += shift;
         } else if (scenario.scenarioId === 'flattener') {
           const factor = (60 - tenor.months) / 300;
           rate += factor * 0.005 + 0.005;
@@ -281,41 +284,53 @@ export class ALMDataGenerator {
   generatePositions(): Position[] {
     const positions: Position[] = [];
 
-    // Assets - Securities
+    // Balance sheet calibrated to match EVE base values:
+    // Asset PV: $12.5B, Liability PV: $10.65B, Equity: $1.85B
+    // NII calculation: Asset yield ~5.8%, Liability cost ~2.6%, NIM ~3.25%
+
+    // Assets - Securities (~$2.3B)
     positions.push(
-      this.createPosition('securities_fixed', 'asset', 'Treasury Securities', 850_000_000, 4.25, 'fixed', 5.2),
-      this.createPosition('securities_fixed', 'asset', 'Agency MBS', 1_200_000_000, 4.75, 'fixed', 4.8, true),
-      this.createPosition('securities_floating', 'asset', 'Floating Rate Notes', 350_000_000, 5.15, 'floating', 0.3),
+      this.createPosition('securities_fixed', 'asset', 'Treasury Securities', 800_000_000, 4.25, 'fixed', 5.2),
+      this.createPosition('securities_fixed', 'asset', 'Agency MBS', 1_100_000_000, 4.75, 'fixed', 4.8, true),
+      this.createPosition('securities_floating', 'asset', 'Floating Rate Notes', 400_000_000, 5.15, 'floating', 0.3),
     );
 
-    // Assets - Loans
+    // Assets - Loans (~$9.0B)
     positions.push(
-      this.createPosition('loans_commercial', 'asset', 'C&I Loans - Fixed', 1_800_000_000, 6.25, 'fixed', 3.2),
-      this.createPosition('loans_commercial', 'asset', 'C&I Loans - Floating', 1_400_000_000, 7.15, 'floating', 0.2),
-      this.createPosition('loans_cre', 'asset', 'CRE Loans', 2_100_000_000, 6.75, 'fixed', 4.5),
+      this.createPosition('loans_commercial', 'asset', 'C&I Loans - Fixed', 1_700_000_000, 6.25, 'fixed', 3.2),
+      this.createPosition('loans_commercial', 'asset', 'C&I Loans - Floating', 1_500_000_000, 7.15, 'floating', 0.2),
+      this.createPosition('loans_cre', 'asset', 'CRE Loans', 2_000_000_000, 6.75, 'fixed', 4.5),
       this.createPosition('loans_mortgage', 'asset', 'Residential Mortgages', 3_200_000_000, 5.85, 'fixed', 5.8, true),
-      this.createPosition('loans_consumer', 'asset', 'Consumer Loans', 650_000_000, 8.25, 'fixed', 2.1),
+      this.createPosition('loans_consumer', 'asset', 'Consumer Loans', 600_000_000, 8.25, 'fixed', 2.1),
     );
 
-    // Liabilities - Deposits
+    // Assets - Other (~$1.2B to balance)
     positions.push(
-      this.createPosition('deposits_dda', 'liability', 'DDA - Consumer', -1_800_000_000, 0.05, 'floating', 0),
-      this.createPosition('deposits_dda', 'liability', 'DDA - Commercial', -2_200_000_000, 0.10, 'floating', 0),
-      this.createPosition('deposits_now', 'liability', 'NOW Accounts', -950_000_000, 0.25, 'floating', 0),
-      this.createPosition('deposits_mmda', 'liability', 'MMDA - Retail', -2_400_000_000, 3.85, 'floating', 0),
-      this.createPosition('deposits_mmda', 'liability', 'MMDA - Commercial', -1_600_000_000, 4.15, 'floating', 0),
-      this.createPosition('deposits_savings', 'liability', 'Savings Accounts', -1_100_000_000, 0.45, 'floating', 0),
-      this.createPosition('deposits_cd', 'liability', 'CDs < 1 Year', -1_200_000_000, 4.50, 'fixed', 0.5),
-      this.createPosition('deposits_cd', 'liability', 'CDs 1-2 Year', -800_000_000, 4.25, 'fixed', 1.5),
+      this.createPosition('securities_floating', 'asset', 'Other Earning Assets', 1_200_000_000, 4.85, 'floating', 0.5),
     );
+    // Total Assets: ~$12.5B
 
-    // Liabilities - Borrowings
+    // Liabilities - Deposits (~$8.8B, reduced to balance)
     positions.push(
-      this.createPosition('borrowings_fhlb', 'liability', 'FHLB Advances', -1_500_000_000, 5.05, 'fixed', 2.0),
-      this.createPosition('borrowings_repo', 'liability', 'Repo Borrowings', -400_000_000, 5.15, 'floating', 0.08),
+      this.createPosition('deposits_dda', 'liability', 'DDA - Consumer', -1_600_000_000, 0.05, 'floating', 0),
+      this.createPosition('deposits_dda', 'liability', 'DDA - Commercial', -1_800_000_000, 0.10, 'floating', 0),
+      this.createPosition('deposits_now', 'liability', 'NOW Accounts', -800_000_000, 0.25, 'floating', 0),
+      this.createPosition('deposits_mmda', 'liability', 'MMDA - Retail', -2_000_000_000, 3.85, 'floating', 0),
+      this.createPosition('deposits_mmda', 'liability', 'MMDA - Commercial', -1_200_000_000, 4.15, 'floating', 0),
+      this.createPosition('deposits_savings', 'liability', 'Savings Accounts', -900_000_000, 0.45, 'floating', 0),
+      this.createPosition('deposits_cd', 'liability', 'CDs < 1 Year', -900_000_000, 4.50, 'fixed', 0.5),
+      this.createPosition('deposits_cd', 'liability', 'CDs 1-2 Year', -600_000_000, 4.25, 'fixed', 1.5),
     );
 
-    // Derivatives
+    // Liabilities - Borrowings (~$850M, reduced to balance)
+    positions.push(
+      this.createPosition('borrowings_fhlb', 'liability', 'FHLB Advances', -700_000_000, 5.05, 'fixed', 2.0),
+      this.createPosition('borrowings_repo', 'liability', 'Repo Borrowings', -150_000_000, 5.15, 'floating', 0.08),
+    );
+    // Total Liabilities: ~$10.65B
+    // Equity (Assets - Liabilities): ~$1.85B
+
+    // Derivatives (notional, not included in balance sheet totals)
     positions.push(
       this.createPosition('swap_pay_fixed', 'derivative', 'Pay Fixed Swap 5Y', 500_000_000, 4.25, 'hybrid', 4.2),
       this.createPosition('swap_receive_fixed', 'derivative', 'Receive Fixed Swap 3Y', 300_000_000, 3.95, 'hybrid', 2.8),
@@ -377,14 +392,20 @@ export class ALMDataGenerator {
       niiImpact = baseNII * this.randomFloat(0.01, 0.03);
     }
 
+    // NIM calculation: NIM changes proportionally to NII (NIM = NII / Avg Assets)
+    // A 5% increase in NII should raise NIM by ~5% of its base value
+    const baseNIM = 3.25;
+    const niiImpactPercent = (niiImpact / baseNII) * 100;
+    const newNIM = baseNIM * (1 + niiImpactPercent / 100);
+
     const nii: NIIResult = {
       baseNII,
       projectedNII: baseNII + niiImpact,
       impactAmount: niiImpact,
-      impactPercent: (niiImpact / baseNII) * 100,
+      impactPercent: niiImpactPercent,
       impactBps: (niiImpact / baseNII) * 10000,
-      nim: 3.25 + (niiImpact / baseNII) * 100 * 0.1,
-      nimChange: (niiImpact / baseNII) * 100 * 0.1,
+      nim: newNIM,
+      nimChange: newNIM - baseNIM,
     };
 
     // EVE calculation
@@ -397,24 +418,43 @@ export class ALMDataGenerator {
       eveImpact = baseEVE * this.randomFloat(0.04, 0.10) * (isStress ? 2 : 1);
     }
 
+    // EVE breakdown: EVE = Asset PV - Liability PV + Derivative PV
+    // Ensure: assetPVChange - liabilityPVChange + derivativePVChange = eveImpact
+    // Allocate: assets 1.4x (main driver), liabilities 0.45x (same direction), derivatives 0.05x
+    // Check: 1.4 - 0.45 + 0.05 = 1.0 (properly reconciles)
+    const assetPV = 12_500_000_000;
+    const liabilityPV = 10_650_000_000;
+    const derivativePV = 0; // Net derivative PV (included to balance EVE)
+
     const eve: EVEResult = {
       baseEVE,
       stressedEVE: baseEVE + eveImpact,
       impactAmount: eveImpact,
       impactPercent: (eveImpact / baseEVE) * 100,
-      assetPV: 12_500_000_000,
-      assetPVChange: eveImpact * 0.6,
-      liabilityPV: 10_650_000_000,
-      liabilityPVChange: eveImpact * 0.4,
-      derivativePV: 25_000_000,
-      derivativePVChange: eveImpact * 0.05,
+      assetPV,
+      assetPVChange: eveImpact * 1.4, // Assets are the main driver
+      liabilityPV,
+      liabilityPVChange: eveImpact * 0.45, // Liabilities move same direction, less magnitude
+      derivativePV,
+      derivativePVChange: eveImpact * 0.05, // Small derivative contribution
     };
 
+    // Duration metrics calibrated to balance sheet
+    // DoE = (Asset Duration * Assets/Equity) - (Liability Duration * Liabilities/Equity)
+    // With Assets=$12.5B, Liabs=$10.65B, Equity=$1.85B:
+    // DoE ≈ 4.2*(12.5/1.85) - 1.8*(10.65/1.85) ≈ 28.4 - 10.4 ≈ 18 years
+    // Using slightly lower values for conservative modeling
+    const assetDuration = 4.2 + this.randomFloat(-0.3, 0.3);
+    const liabilityDuration = 1.8 + this.randomFloat(-0.2, 0.2);
+    const durationGap = assetDuration - liabilityDuration;
+    // Equity duration leveraged by balance sheet structure
+    const equityDuration = 12.0 + this.randomFloat(-1.5, 1.5);
+
     const duration: DurationMetrics = {
-      assetDuration: 4.2 + this.randomFloat(-0.3, 0.3),
-      liabilityDuration: 1.8 + this.randomFloat(-0.2, 0.2),
-      equityDuration: 6.5 + this.randomFloat(-0.5, 0.5),
-      durationGap: 2.4 + this.randomFloat(-0.2, 0.2),
+      assetDuration,
+      liabilityDuration,
+      equityDuration,
+      durationGap,
       dv01: 1_250_000 + this.randomInt(-100000, 100000),
       convexity: -0.15 + this.randomFloat(-0.05, 0.05),
     };
@@ -492,14 +532,16 @@ export class ALMDataGenerator {
         trend: 'stable',
       },
       {
+        // Duration of Equity limits adjusted for realistic leverage
+        // Many banks tolerate DoE of 12-18 years with strong capital
         limitId: 'limit_doe',
         limitName: 'Duration of Equity',
         metric: 'DOE',
         currentValue: Math.abs(duration.equityDuration),
-        warningThreshold: 7,
-        criticalThreshold: 10,
-        status: Math.abs(duration.equityDuration) > 10 ? 'breach' : Math.abs(duration.equityDuration) > 7 ? 'warning' : 'ok',
-        utilizationPercent: (Math.abs(duration.equityDuration) / 10) * 100,
+        warningThreshold: 12,
+        criticalThreshold: 15,
+        status: Math.abs(duration.equityDuration) > 15 ? 'breach' : Math.abs(duration.equityDuration) > 12 ? 'warning' : 'ok',
+        utilizationPercent: (Math.abs(duration.equityDuration) / 15) * 100,
         trend: 'stable',
       },
       {
@@ -523,14 +565,17 @@ export class ALMDataGenerator {
   generateDepositProducts(): DepositProduct[] {
     const products: DepositProduct[] = [];
 
+    // Decay rates calibrated as annual rates to match realistic half-lives
+    // Industry standard: 10% annual decay ≈ 7-10 year half-life
+    // DDA ~7yr half-life (10% decay), MMDA ~4-5yr (15-17% decay), CD ~contractual
     const depositTypes: { type: ProductType; name: string; avgBeta: number; decay: number }[] = [
-      { type: 'deposits_dda', name: 'DDA - Consumer', avgBeta: 0.15, decay: 0.02 },
-      { type: 'deposits_dda', name: 'DDA - Commercial', avgBeta: 0.25, decay: 0.03 },
-      { type: 'deposits_now', name: 'NOW Accounts', avgBeta: 0.20, decay: 0.025 },
-      { type: 'deposits_mmda', name: 'MMDA - Retail', avgBeta: 0.65, decay: 0.04 },
-      { type: 'deposits_mmda', name: 'MMDA - Commercial', avgBeta: 0.75, decay: 0.06 },
-      { type: 'deposits_savings', name: 'Savings Accounts', avgBeta: 0.35, decay: 0.03 },
-      { type: 'deposits_cd', name: 'CD < 1 Year', avgBeta: 0.90, decay: 0.15 },
+      { type: 'deposits_dda', name: 'DDA - Consumer', avgBeta: 0.15, decay: 0.10 }, // ~7yr half-life (84mo)
+      { type: 'deposits_dda', name: 'DDA - Commercial', avgBeta: 0.25, decay: 0.12 }, // ~6yr half-life
+      { type: 'deposits_now', name: 'NOW Accounts', avgBeta: 0.20, decay: 0.10 }, // ~7yr half-life
+      { type: 'deposits_mmda', name: 'MMDA - Retail', avgBeta: 0.65, decay: 0.17 }, // ~4yr half-life
+      { type: 'deposits_mmda', name: 'MMDA - Commercial', avgBeta: 0.75, decay: 0.20 }, // ~3.5yr half-life
+      { type: 'deposits_savings', name: 'Savings Accounts', avgBeta: 0.35, decay: 0.08 }, // ~8.5yr half-life
+      { type: 'deposits_cd', name: 'CD < 1 Year', avgBeta: 0.90, decay: 0.80 }, // ~10mo half-life (contractual)
     ];
 
     for (const dt of depositTypes) {
@@ -555,16 +600,18 @@ export class ALMDataGenerator {
   }
 
   private generateBetaMetrics(avgBeta: number): BetaMetrics {
-    const levelBeta = avgBeta + this.randomFloat(-0.1, 0.1);
+    // Cap beta at 1.0 (100%) for conservative modeling
+    // Banks rarely assume >100% pass-through in deposit pricing
+    const levelBeta = Math.max(0, Math.min(1.0, avgBeta + this.randomFloat(-0.1, 0.1)));
     return {
-      levelBeta: Math.max(0, Math.min(1.5, levelBeta)),
-      passThroughSlope: levelBeta * this.randomFloat(0.85, 1.15),
+      levelBeta,
+      passThroughSlope: Math.max(0, Math.min(1.0, levelBeta * this.randomFloat(0.85, 1.15))),
       timeVaryingBeta: Array.from({ length: 24 }, () =>
-        Math.max(0, levelBeta + this.randomNormal(0, 0.05))
+        Math.max(0, Math.min(1.0, levelBeta + this.randomNormal(0, 0.05)))
       ),
       confidenceInterval: {
         lower: Math.max(0, levelBeta - 0.15),
-        upper: Math.min(1.5, levelBeta + 0.15),
+        upper: Math.min(1.0, levelBeta + 0.15),
       },
       rSquared: this.randomFloat(0.7, 0.95),
       stability: levelBeta > 0.5 ? 'moderate' : 'stable',
@@ -573,19 +620,24 @@ export class ALMDataGenerator {
   }
 
   private generateDecayParameters(baseDecay: number): DecayParameters {
-    const decayRate = baseDecay + this.randomFloat(-0.01, 0.01);
-    const halfLife = Math.log(2) / decayRate * 12;
+    // baseDecay is annual decay rate (e.g., 0.10 = 10% per year)
+    const decayRate = baseDecay + this.randomFloat(-0.02, 0.02);
+    // Half-life in months: convert from years (ln(2)/decayRate) to months (*12)
+    const halfLifeYears = Math.log(2) / decayRate;
+    const halfLife = halfLifeYears * 12; // Convert to months
 
     return {
       modelType: 'exponential',
       decayRate,
       halfLife,
+      // Survival curve using proper exponential decay over months
       survivalCurve: Array.from({ length: 61 }, (_, month) => ({
         month,
+        // survivalRate = e^(-decayRate * t) where t is in years (month/12)
         survivalRate: Math.exp(-decayRate * month / 12),
         confidence: 0.95 - month * 0.005,
       })),
-      assumedMaturity: halfLife * 1.5,
+      assumedMaturity: halfLife * 1.5, // Average life ≈ 1.5x half-life for exponential
       realizedMaturity: halfLife * 1.5 * this.randomFloat(0.85, 1.15),
     };
   }
@@ -813,13 +865,15 @@ export class ALMDataGenerator {
       { bucket: '181-365 Days', bucketDays: 365, inflows: 1_200_000_000, outflows: 1_100_000_000, netFlow: 100_000_000, cumulativeGap: 120_000_000, availableLiquidity: 940_000_000 },
     ];
 
+    // Funding concentrations aligned with balance sheet positions
+    // Total funding: ~$10.65B liabilities + $1.85B equity = $12.5B
     const fundingConcentrations: FundingConcentration[] = [
-      { sourceType: 'Deposits', sourceName: 'Core Deposits', amount: 8_500_000_000, percentOfTotal: 62, maturityProfile: 'long', riskLevel: 'low' },
-      { sourceType: 'Deposits', sourceName: 'Brokered CDs', amount: 850_000_000, percentOfTotal: 6, maturityProfile: 'short', riskLevel: 'high' },
-      { sourceType: 'Borrowings', sourceName: 'FHLB Advances', amount: 1_500_000_000, percentOfTotal: 11, maturityProfile: 'medium', riskLevel: 'low' },
-      { sourceType: 'Borrowings', sourceName: 'Fed Funds', amount: 200_000_000, percentOfTotal: 1.5, maturityProfile: 'short', riskLevel: 'medium' },
-      { sourceType: 'Capital', sourceName: 'Equity', amount: 1_850_000_000, percentOfTotal: 13.5, maturityProfile: 'long', riskLevel: 'low' },
-      { sourceType: 'Other', sourceName: 'Other Liabilities', amount: 800_000_000, percentOfTotal: 6, maturityProfile: 'mixed', riskLevel: 'medium' },
+      { sourceType: 'Deposits', sourceName: 'Core Deposits', amount: 7_100_000_000, percentOfTotal: 57, maturityProfile: 'long', riskLevel: 'low' },
+      { sourceType: 'Deposits', sourceName: 'Time Deposits (CDs)', amount: 1_500_000_000, percentOfTotal: 12, maturityProfile: 'short', riskLevel: 'medium' },
+      { sourceType: 'Borrowings', sourceName: 'FHLB Advances', amount: 700_000_000, percentOfTotal: 5.5, maturityProfile: 'medium', riskLevel: 'low' },
+      { sourceType: 'Borrowings', sourceName: 'Repo/Fed Funds', amount: 150_000_000, percentOfTotal: 1.2, maturityProfile: 'short', riskLevel: 'medium' },
+      { sourceType: 'Capital', sourceName: 'Equity', amount: 1_850_000_000, percentOfTotal: 14.8, maturityProfile: 'long', riskLevel: 'low' },
+      { sourceType: 'Other', sourceName: 'Other Liabilities', amount: 1_200_000_000, percentOfTotal: 9.5, maturityProfile: 'mixed', riskLevel: 'medium' },
     ];
 
     const contingencyReadiness: ContingencyItem[] = [
@@ -1004,9 +1058,10 @@ export class ALMDataGenerator {
     ];
 
     return depositTypes.map(dt => {
-      const levelBeta = dt.avgBeta + this.randomFloat(-0.08, 0.08);
-      const upBeta = levelBeta * this.randomFloat(1.05, 1.20);
-      const downBeta = levelBeta * this.randomFloat(0.70, 0.90);
+      // Cap betas at 1.0 (100%) for conservative modeling
+      const levelBeta = Math.max(0, Math.min(1.0, dt.avgBeta + this.randomFloat(-0.08, 0.08)));
+      const upBeta = Math.max(0, Math.min(1.0, levelBeta * this.randomFloat(1.05, 1.15)));
+      const downBeta = Math.max(0, Math.min(1.0, levelBeta * this.randomFloat(0.70, 0.90)));
 
       // Generate historical beta with realistic pattern
       const historicalBeta: { date: Date; value: number; marketRate: number; productRate: number }[] = [];
@@ -1035,7 +1090,7 @@ export class ALMDataGenerator {
 
         historicalBeta.push({
           date,
-          value: Math.max(0, Math.min(1.5, levelBeta + this.randomNormal(0, 0.05))),
+          value: Math.max(0, Math.min(1.0, levelBeta + this.randomNormal(0, 0.05))),
           marketRate,
           productRate,
         });
@@ -1048,12 +1103,13 @@ export class ALMDataGenerator {
         segment: dt.segment,
         balance: dt.balance,
 
-        levelBeta: Math.max(0, Math.min(1.2, levelBeta)),
-        cumulativeBeta: levelBeta * this.randomFloat(0.85, 1.0),
-        incrementalBeta: levelBeta * this.randomFloat(0.9, 1.15),
+        // All betas capped at 1.0 for conservative modeling
+        levelBeta,
+        cumulativeBeta: Math.max(0, Math.min(1.0, levelBeta * this.randomFloat(0.85, 1.0))),
+        incrementalBeta: Math.max(0, Math.min(1.0, levelBeta * this.randomFloat(0.9, 1.10))),
 
-        upBeta: Math.max(0, Math.min(1.5, upBeta)),
-        downBeta: Math.max(0, Math.min(1.2, downBeta)),
+        upBeta,
+        downBeta,
         asymmetryRatio: upBeta / Math.max(0.01, downBeta),
 
         lagMonths: dt.type.includes('cd') ? 0 : this.randomInt(1, 3),
@@ -1063,17 +1119,17 @@ export class ALMDataGenerator {
         standardError: this.randomFloat(0.02, 0.08),
         confidenceInterval: {
           lower: Math.max(0, levelBeta - 0.12),
-          upper: Math.min(1.5, levelBeta + 0.12),
+          upper: Math.min(1.0, levelBeta + 0.12),
         },
         sampleSize: this.randomInt(36, 60),
         stability: levelBeta > 0.5 ? 'moderate' : 'stable',
 
         historicalBeta,
 
-        peerBetaAvg: levelBeta * this.randomFloat(0.9, 1.1),
+        peerBetaAvg: Math.min(1.0, levelBeta * this.randomFloat(0.9, 1.1)),
         peerBetaRange: {
-          min: levelBeta * 0.7,
-          max: levelBeta * 1.3,
+          min: Math.max(0, levelBeta * 0.7),
+          max: Math.min(1.0, levelBeta * 1.2),
         },
 
         modelType: 'regression',
