@@ -39,7 +39,80 @@ import type {
   BasisRiskAssumptions,
   AssumptionLibrary,
   AssumptionCategory,
+  InstitutionProfile,
+  InstitutionConfig,
 } from '../types';
+
+// ============================================================================
+// Institution Profile Configurations
+// Based on typical bank size tiers and risk profiles
+// ============================================================================
+
+export const INSTITUTION_PROFILES: Record<InstitutionProfile, InstitutionConfig> = {
+  community: {
+    profile: 'community',
+    name: 'Community Bank',
+    totalAssets: 8_000_000_000, // $8B
+    depositMix: { ddaPercent: 25, nowPercent: 10, mmdaPercent: 30, savingsPercent: 15, cdPercent: 20 },
+    loanMix: { commercialPercent: 25, crePercent: 30, mortgagePercent: 35, consumerPercent: 10 },
+    durationTarget: 3.5,
+    hedgeUsage: 'minimal',
+  },
+  regional: {
+    profile: 'regional',
+    name: 'Regional Bank',
+    totalAssets: 45_000_000_000, // $45B
+    depositMix: { ddaPercent: 22, nowPercent: 8, mmdaPercent: 35, savingsPercent: 12, cdPercent: 23 },
+    loanMix: { commercialPercent: 30, crePercent: 25, mortgagePercent: 30, consumerPercent: 15 },
+    durationTarget: 4.0,
+    hedgeUsage: 'moderate',
+  },
+  super_regional: {
+    profile: 'super_regional',
+    name: 'Super Regional Bank',
+    totalAssets: 180_000_000_000, // $180B
+    depositMix: { ddaPercent: 20, nowPercent: 5, mmdaPercent: 40, savingsPercent: 10, cdPercent: 25 },
+    loanMix: { commercialPercent: 35, crePercent: 20, mortgagePercent: 25, consumerPercent: 20 },
+    durationTarget: 4.5,
+    hedgeUsage: 'active',
+  },
+};
+
+// Regulatory standards metadata for UI display
+export const REGULATORY_STANDARDS = {
+  bcbs239: {
+    id: 'bcbs239',
+    name: 'BCBS 239 - Risk Data Aggregation',
+    shortName: 'BCBS 239',
+    description: 'Principles for effective risk data aggregation and risk reporting',
+    url: 'https://www.bis.org/publ/bcbs239.htm',
+    applicableTo: ['reporting'] as const,
+  },
+  irrbb: {
+    id: 'irrbb',
+    name: 'BCBS IRRBB Standards',
+    shortName: 'IRRBB',
+    description: 'Interest rate risk in the banking book - standardized shock scenarios',
+    url: 'https://www.bis.org/bcbs/publ/d368.htm',
+    applicableTo: ['scenarios'] as const,
+  },
+  sr117: {
+    id: 'sr117',
+    name: 'SR 11-7 Model Risk Management',
+    shortName: 'SR 11-7',
+    description: 'Supervisory guidance on model risk management',
+    url: 'https://www.federalreserve.gov/supervisionreg/srletters/sr1107.htm',
+    applicableTo: ['assumptions'] as const,
+  },
+  baselLiquidity: {
+    id: 'basel_liquidity',
+    name: 'Basel III LCR/NSFR',
+    shortName: 'LCR/NSFR',
+    description: 'Liquidity Coverage Ratio and Net Stable Funding Ratio standards',
+    url: 'https://www.bis.org/bcbs/publ/d295.htm',
+    applicableTo: ['liquidity'] as const,
+  },
+};
 
 // ============================================================================
 // ALM Synthetic Data Generator
@@ -133,6 +206,13 @@ export class ALMDataGenerator {
       dataQualityScore: this.randomInt(85, 98),
       warnings,
       status: 'final',
+      // SR 11-7 Governance fields
+      approvedBy: 'ALCO Committee',
+      approvedAt: subMonths(runDate, 0.1),
+      changeTicketId: `CHG-${this.randomInt(10000, 99999)}`,
+      sourceSystem: this.randomChoice(['QRM', 'FIS Horizon', 'Empyrean', 'In-house']),
+      extractionTime: runDate,
+      runCadence: isCurrentRun ? 'month_end' : 'month_end',
     };
   }
 
@@ -222,6 +302,11 @@ export class ALMDataGenerator {
       description: 'Regulatory and internal rate shock scenarios for IRR analysis',
       createdAt: subMonths(this.asOfDate, 6),
       scenarios,
+      // IRRBB calibration metadata
+      calibrationStandard: 'BCBS_IRRBB',
+      calibrationVersion: '2016',
+      floorPolicy: '0bp floor applied to down shocks',
+      shockFamily: 'standardized',
     };
   }
 
@@ -1398,18 +1483,30 @@ export class ALMDataGenerator {
   }
 }
 
+// Schema version - increment this when data structure changes to invalidate stale caches
+// This prevents "Rendered fewer hooks than expected" errors on deployment
+const DATA_SCHEMA_VERSION = '2.0.0';
+
 // Singleton instance for demo mode
 let generatorInstance: ALMDataGenerator | null = null;
-let cachedData: ReturnType<ALMDataGenerator['generateAllData']> | null = null;
+let cachedData: (ReturnType<ALMDataGenerator['generateAllData']> & { _schemaVersion: string }) | null = null;
 
 export function getALMDemoData(seed?: string, institutionId?: string) {
+  // Invalidate cache if schema version changed (deployment with new code)
+  if (cachedData && cachedData._schemaVersion !== DATA_SCHEMA_VERSION) {
+    console.log(`[ALM] Schema version changed from ${cachedData._schemaVersion} to ${DATA_SCHEMA_VERSION}, regenerating data`);
+    generatorInstance = null;
+    cachedData = null;
+  }
+
   if (!generatorInstance || seed || institutionId) {
     generatorInstance = new ALMDataGenerator(seed, institutionId);
     cachedData = null;
   }
 
   if (!cachedData) {
-    cachedData = generatorInstance.generateAllData();
+    const data = generatorInstance.generateAllData();
+    cachedData = { ...data, _schemaVersion: DATA_SCHEMA_VERSION };
   }
 
   return cachedData;
@@ -1418,4 +1515,8 @@ export function getALMDemoData(seed?: string, institutionId?: string) {
 export function resetALMDemoData() {
   generatorInstance = null;
   cachedData = null;
+}
+
+export function getDataSchemaVersion() {
+  return DATA_SCHEMA_VERSION;
 }

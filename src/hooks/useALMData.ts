@@ -85,11 +85,16 @@ export function useALMData(): UseALMDataReturn {
 
   const [filters, setFiltersState] = useState<GlobalFilters>(DEFAULT_FILTERS);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback((isRetry = false) => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const data = getALMDemoData();
+
+      // Validate that critical data exists to catch stale cache issues early
+      if (!data.currentRun || !data.scenarioSet || !data.metrics) {
+        throw new Error('Invalid data structure - cache may be stale');
+      }
 
       setState({
         isLoading: false,
@@ -118,6 +123,14 @@ export function useALMData(): UseALMDataReturn {
         scenarioSetId: data.scenarioSet.scenarioSetId,
       }));
     } catch (error) {
+      // On first error, try resetting the cache and reloading
+      if (!isRetry) {
+        console.warn('[ALM] Data load failed, resetting cache and retrying:', error);
+        resetALMDemoData();
+        loadData(true);
+        return;
+      }
+
       setState((prev) => ({
         ...prev,
         isLoading: false,

@@ -17,6 +17,13 @@ export interface Run {
   dataQualityScore: number; // 0-100
   warnings: DataWarning[];
   status: 'draft' | 'final' | 'archived';
+  // SR 11-7 Governance fields
+  approvedBy?: string;
+  approvedAt?: Date;
+  changeTicketId?: string;
+  sourceSystem?: string; // e.g., "QRM", "FIS", "Empyrean", "In-house"
+  extractionTime?: Date;
+  runCadence?: 'month_end' | 'quarter_end' | 'ad_hoc' | 'daily';
 }
 
 export interface DataWarning {
@@ -43,6 +50,11 @@ export interface ScenarioSet {
   description: string;
   createdAt: Date;
   scenarios: Scenario[];
+  // IRRBB calibration metadata (BCBS standards)
+  calibrationStandard?: 'BCBS_IRRBB' | 'internal' | 'regulatory_custom';
+  calibrationVersion?: string; // e.g., "2016", "2024-recalibration"
+  floorPolicy?: string; // e.g., "0bp floor applied", "negative rates allowed"
+  shockFamily?: 'standardized' | 'historical' | 'custom';
 }
 
 export interface Scenario {
@@ -108,6 +120,19 @@ export interface Position {
   accountingClassification?: 'HTM' | 'AFS' | 'trading';
   duration?: number;
   convexity?: number;
+  // Book vs modeled (BCBS 239 traceability)
+  bookBalance?: number;
+  modelBalance?: number;
+  bookRate?: number;
+  modelRate?: number;
+  // Bank identifiers
+  glAccount?: string;
+  costCenter?: string;
+  productCode?: string;
+  callReportLine?: string;
+  // Segmentation
+  region?: string;
+  channel?: 'branch' | 'online' | 'wholesale' | 'correspondent';
 }
 
 export type ProductType =
@@ -842,4 +867,86 @@ export interface ChartConfig {
   showGrid: boolean;
   animate: boolean;
   height: number;
+}
+
+// ----------------------------------------------------------------------------
+// Institution Profile Types (for synthetic data scaling)
+// ----------------------------------------------------------------------------
+
+export type InstitutionProfile = 'community' | 'regional' | 'super_regional';
+
+export interface InstitutionConfig {
+  profile: InstitutionProfile;
+  name: string;
+  totalAssets: number; // Target total assets in dollars
+  depositMix: DepositMix;
+  loanMix: LoanMix;
+  durationTarget: number; // Target asset duration
+  hedgeUsage: 'minimal' | 'moderate' | 'active';
+  // Typical ranges by profile:
+  // Community: $2B-$15B assets, minimal hedging
+  // Regional: $15B-$120B assets, moderate hedging
+  // Super-regional: $120B-$400B assets, active hedging
+}
+
+export interface DepositMix {
+  ddaPercent: number;
+  nowPercent: number;
+  mmdaPercent: number;
+  savingsPercent: number;
+  cdPercent: number;
+}
+
+export interface LoanMix {
+  commercialPercent: number;
+  crePercent: number;
+  mortgagePercent: number;
+  consumerPercent: number;
+}
+
+// ----------------------------------------------------------------------------
+// Standards & Compliance Types
+// ----------------------------------------------------------------------------
+
+export interface RegulatoryStandard {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string;
+  url?: string;
+  applicableTo: ('scenarios' | 'reporting' | 'assumptions' | 'liquidity')[];
+}
+
+export interface DataLineage {
+  sourceSystem: string;
+  extractionTime: Date;
+  transformations: string[];
+  validationsPassed: string[];
+  validationsFailed: string[];
+  dataQualityScore: number;
+}
+
+// ----------------------------------------------------------------------------
+// Synthetic Data Export Types
+// ----------------------------------------------------------------------------
+
+export interface ALMDataExport {
+  _schemaVersion: string;
+  _generatedAt: Date;
+  _profile: InstitutionProfile;
+  _seed: string;
+  currentRun: Run;
+  priorRun: Run;
+  scenarioSet: ScenarioSet;
+  curves: YieldCurve[];
+  positions: Position[];
+  metrics: Record<string, RiskMetrics>;
+  depositProducts: DepositProduct[];
+  macroSeries: MacroSeries[];
+  assumptionSets: AssumptionSet[];
+  alerts: Alert[];
+  liquidity: LiquidityMetrics;
+  hedges: Hedge[];
+  backtests: BacktestResult[];
+  assumptionLibrary: AssumptionLibrary;
 }
