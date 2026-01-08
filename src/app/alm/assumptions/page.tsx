@@ -70,7 +70,7 @@ export default function AssumptionsPage() {
 
   // Calculate summary metrics from assumption library
   const summaryMetrics = useMemo(() => {
-    if (!assumptionLibrary) {
+    if (!assumptionLibrary?.summaryMetrics) {
       return {
         avgDepositBeta: 0.52,
         avgLoanBeta: 0.68,

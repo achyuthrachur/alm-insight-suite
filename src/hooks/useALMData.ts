@@ -63,6 +63,44 @@ const DEFAULT_FILTERS: GlobalFilters = {
   currency: 'USD',
 };
 
+const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
+
+const isValidALMDemoData = (data: ReturnType<typeof getALMDemoData>) => {
+  if (!data?.currentRun || !data?.priorRun || !data?.scenarioSet || !data?.metrics) {
+    return false;
+  }
+
+  if (
+    !isArray(data.curves) ||
+    !isArray(data.positions) ||
+    !isArray(data.depositProducts) ||
+    !isArray(data.macroSeries) ||
+    !isArray(data.assumptionSets) ||
+    !isArray(data.alerts) ||
+    !isArray(data.hedges) ||
+    !isArray(data.backtests)
+  ) {
+    return false;
+  }
+
+  if (!data.liquidity || !isArray(data.liquidity.cashflowLadder)) {
+    return false;
+  }
+
+  if (
+    !data.assumptionLibrary ||
+    !data.assumptionLibrary.summaryMetrics ||
+    !isArray(data.assumptionLibrary.depositBetas) ||
+    !isArray(data.assumptionLibrary.loanAssumptions) ||
+    !isArray(data.assumptionLibrary.basisRisks) ||
+    !isArray(data.assumptionLibrary.assumptionHistory)
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 export function useALMData(): UseALMDataReturn {
   const [state, setState] = useState<ALMDataState>({
     isLoading: true,
@@ -92,7 +130,7 @@ export function useALMData(): UseALMDataReturn {
       const data = getALMDemoData();
 
       // Validate that critical data exists to catch stale cache issues early
-      if (!data.currentRun || !data.scenarioSet || !data.metrics) {
+      if (!isValidALMDemoData(data)) {
         throw new Error('Invalid data structure - cache may be stale');
       }
 
