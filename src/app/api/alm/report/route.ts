@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Force dynamic rendering and disable Vercel Data Cache
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // API route for AI-powered ALCO report generation
 // Uses OpenAI GPT API for narrative generation
 
@@ -50,6 +54,8 @@ export async function POST(request: NextRequest) {
         success: true,
         report: generateMockReport(body),
         mode: 'demo',
+      }, {
+        headers: { 'Cache-Control': 'no-store, must-revalidate' },
       });
     }
 
@@ -127,6 +133,7 @@ Remember: PLAIN TEXT ONLY, no markdown formatting.`;
           },
         ],
       }),
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -137,6 +144,8 @@ Remember: PLAIN TEXT ONLY, no markdown formatting.`;
         report: generateMockReport(body),
         mode: 'demo',
         error: 'AI API unavailable, using demo mode',
+      }, {
+        headers: { 'Cache-Control': 'no-store, must-revalidate' },
       });
     }
 
@@ -147,13 +156,18 @@ Remember: PLAIN TEXT ONLY, no markdown formatting.`;
       success: true,
       report: reportContent,
       mode: 'ai',
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
 
   } catch (error) {
     console.error('Report generation error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to generate report' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store, must-revalidate' },
+      }
     );
   }
 }
@@ -250,5 +264,7 @@ export async function GET() {
     service: 'ALM Report Generator',
     hasOpenAIKey: !!process.env.OPENAI_API_KEY,
     hasFredKey: !!process.env.FRED_API_KEY,
+  }, {
+    headers: { 'Cache-Control': 'no-store, must-revalidate' },
   });
 }

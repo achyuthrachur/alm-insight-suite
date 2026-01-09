@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Force dynamic rendering and disable Vercel Data Cache
+// This prevents stale cached responses from causing client errors
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // FRED API integration for macroeconomic data
 // Documentation: https://fred.stlouisfed.org/docs/api/fred/
 
@@ -54,7 +59,7 @@ async function fetchFredSeries(
   url.searchParams.set('sort_order', 'desc');
   url.searchParams.set('limit', observationCount.toString());
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { cache: 'no-store' });
 
   if (!response.ok) {
     throw new Error(`FRED API error for ${seriesId}: ${response.statusText}`);
@@ -74,11 +79,15 @@ export async function GET(request: NextRequest) {
   const FRED_API_KEY = process.env.FRED_API_KEY;
 
   if (!FRED_API_KEY) {
+    const demo = generateMockMacroData();
     return NextResponse.json({
-      success: false,
-      error: 'FRED API key not configured',
+      success: true,
       mode: 'demo',
-      data: generateMockMacroData(),
+      latest: demo.latest,
+      series: demo.series,
+      availableSeries: demo.availableSeries,
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
   }
 
@@ -108,6 +117,8 @@ export async function GET(request: NextRequest) {
         success: true,
         mode: 'live',
         data: results,
+      }, {
+        headers: { 'Cache-Control': 'no-store, must-revalidate' },
       });
     }
 
@@ -150,15 +161,23 @@ export async function GET(request: NextRequest) {
       latest: latestData,
       series: results,
       availableSeries: Object.keys(FRED_SERIES),
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
 
   } catch (error) {
     console.error('FRED API error:', error);
+    // Return demo data with consistent shape (top-level latest/series)
+    const demo = generateMockMacroData();
     return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch FRED data',
+      success: true,
       mode: 'demo',
-      data: generateMockMacroData(),
+      latest: demo.latest,
+      series: demo.series,
+      availableSeries: demo.availableSeries,
+      error: 'Failed to fetch FRED data - using demo data',
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
   }
 }
@@ -171,6 +190,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: 'FRED API key not configured',
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
   }
 
@@ -182,7 +203,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'seriesIds array is required',
-      }, { status: 400 });
+      }, {
+        status: 400,
+        headers: { 'Cache-Control': 'no-store, must-revalidate' },
+      });
     }
 
     const results: Record<string, { date: string; value: number }[]> = {};
@@ -199,7 +223,7 @@ export async function POST(request: NextRequest) {
           if (endDate) url.searchParams.set('observation_end', endDate);
           if (frequency) url.searchParams.set('frequency', frequency);
 
-          const response = await fetch(url.toString());
+          const response = await fetch(url.toString(), { cache: 'no-store' });
           const data: FredResponse = await response.json();
 
           results[seriesId] = data.observations
@@ -219,6 +243,8 @@ export async function POST(request: NextRequest) {
       success: true,
       mode: 'live',
       data: results,
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
 
   } catch (error) {
@@ -226,7 +252,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch FRED data',
-    }, { status: 500 });
+    }, {
+      status: 500,
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
+    });
   }
 }
 
