@@ -1485,7 +1485,8 @@ export class ALMDataGenerator {
 
 // Schema version - increment this when data structure changes to invalidate stale caches
 // This prevents "Rendered fewer hooks than expected" errors on deployment
-const DATA_SCHEMA_VERSION = '2.0.1';
+// Incremented to 2.1.0 to force cache invalidation after hydration fix
+const DATA_SCHEMA_VERSION = '2.1.0';
 
 // Singleton instance for demo mode
 let generatorInstance: ALMDataGenerator | null = null;
